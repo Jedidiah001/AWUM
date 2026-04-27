@@ -1,0 +1,819 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-people-fill"></i> Roster Management</h2>
+        <p class="text-muted mb-0">Manage your complete wrestling roster</p>
+    </div>
+    <!-- ADD THIS BUTTON -->
+    <div>
+        <button class="btn btn-success btn-lg" onclick="loadView('caw')">
+            <i class="bi bi-person-plus-fill"></i> Create New Wrestler
+        </button>
+    </div>
+</div>
+
+<!-- Roster Management View -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        <h2><i class="bi bi-people-fill"></i> Roster Management</h2>
+        <p class="lead">View and manage all wrestlers in your promotion.</p>
+        <hr>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-funnel"></i> Filters</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Brand</label>
+                        <select class="form-select roster-filter" id="filterBrand">
+                            <option value="">All Brands</option>
+                            <option value="ROC Alpha">ROC Alpha</option>
+                            <option value="ROC Velocity">ROC Velocity</option>
+                            <option value="ROC Vanguard">ROC Vanguard</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Alignment</label>
+                        <select class="form-select roster-filter" id="filterAlignment">
+                            <option value="">All Alignments</option>
+                            <option value="Face">Face</option>
+                            <option value="Heel">Heel</option>
+                            <option value="Tweener">Tweener</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Role</label>
+                        <select class="form-select roster-filter" id="filterRole">
+                            <option value="">All Roles</option>
+                            <option value="Main Event">Main Event</option>
+                            <option value="Upper Midcard">Upper Midcard</option>
+                            <option value="Midcard">Midcard</option>
+                            <option value="Lower Midcard">Lower Midcard</option>
+                            <option value="Jobber">Jobber</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Gender</label>
+                        <select class="form-select roster-filter" id="filterGender">
+                            <option value="">All</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Roster Summary Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h3 id="statTotalWrestlers">0</h3>
+                <p class="mb-0">Total Wrestlers</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h3 id="statActiveWrestlers">0</h3>
+                <p class="mb-0">Active Wrestlers</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h3 id="statInjuredWrestlers">0</h3>
+                <p class="mb-0">Injured</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h3 id="statContractsExpiring">0</h3>
+                <p class="mb-0">Contracts Expiring</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Morale Behavior Alerts Panel (Steps 245-253) -->
+<div class="row mb-4" id="moraleBehaviorPanel" style="display:none!important;">
+    <div class="col-md-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> Locker Room Alerts</h5>
+                <button class="btn btn-sm btn-outline-dark" onclick="loadMoraleAlerts()">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div id="moraleBehaviorList" class="list-group list-group-flush">
+                    <div class="list-group-item text-center text-muted py-3">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                        Loading morale alerts...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Roster Table -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-table"></i> 
+                    Wrestler Roster 
+                    <span class="badge bg-secondary" id="rosterCount">0</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="rosterTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Name</th>
+                                <th>Brand</th>
+                                <th>Alignment</th>
+                                <th>Role</th>
+                                <th>W-L</th>
+                                <th>Overall</th>
+                                <th>Pop</th>
+                                <th>Mom</th>
+                                <th>Morale</th>
+                                <th>Injury</th>
+                                <th>Contract</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rosterTableBody">
+                            <tr>
+                                <td colspan="13" class="text-center">
+                                    <div class="spinner-border" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p>Loading roster...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Wrestler Detail Modal -->
+<div class="modal fade" id="wrestlerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="wrestlerModalTitle">Wrestler Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="wrestlerModalBody">
+                <!-- Filled dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Immediately invoked function to set up roster management
+(function() {
+    'use strict';
+    
+    console.log('Roster view script initializing...');
+    
+    let currentRosterData = [];
+
+    // Load roster data from API
+    async function loadRosterData() {
+        console.log('Loading roster data...');
+        
+        try {
+            // Build query parameters
+            const params = new URLSearchParams();
+            
+            const brandEl = document.getElementById('filterBrand');
+            const alignmentEl = document.getElementById('filterAlignment');
+            const roleEl = document.getElementById('filterRole');
+            const genderEl = document.getElementById('filterGender');
+            
+            const brand = brandEl ? brandEl.value : '';
+            const alignment = alignmentEl ? alignmentEl.value : '';
+            const role = roleEl ? roleEl.value : '';
+            const gender = genderEl ? genderEl.value : '';
+            
+            if (brand) params.append('brand', brand);
+            if (alignment) params.append('alignment', alignment);
+            if (role) params.append('role', role);
+            if (gender) params.append('gender', gender);
+            
+            const url = '/api/roster' + (params.toString() ? '?' + params.toString() : '');
+            console.log('Fetching from:', url);
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('Received roster data:', data);
+            
+            currentRosterData = data.wrestlers;
+            
+            renderRosterTable(currentRosterData);
+            
+        } catch (error) {
+            console.error('Failed to load roster:', error);
+            const tbody = document.getElementById('rosterTableBody');
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="12" class="text-center text-danger">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Failed to load roster: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+    }
+
+    // Load summary stats
+    async function loadSummaryStats() {
+        console.log('Loading summary stats...');
+        
+        try {
+            const response = await fetch('/api/stats/roster-summary');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const stats = await response.json();
+            console.log('Received stats:', stats);
+            
+            const totalEl = document.getElementById('statTotalWrestlers');
+            const activeEl = document.getElementById('statActiveWrestlers');
+            const injuredEl = document.getElementById('statInjuredWrestlers');
+            const contractsEl = document.getElementById('statContractsExpiring');
+            
+            if (totalEl) totalEl.textContent = stats.total_wrestlers || 0;
+            if (activeEl) activeEl.textContent = stats.active_wrestlers || 0;
+            if (injuredEl) injuredEl.textContent = stats.injured_wrestlers || 0;
+            if (contractsEl) contractsEl.textContent = stats.contracts_expiring_soon || 0;
+            
+        } catch (error) {
+            console.error('Failed to load stats:', error);
+        }
+    }
+
+    // Render roster table with stats
+    async function renderRosterTable(wrestlers) {
+        console.log('Rendering roster table with', wrestlers.length, 'wrestlers');
+        
+        const tbody = document.getElementById('rosterTableBody');
+        const countEl = document.getElementById('rosterCount');
+        
+        if (countEl) countEl.textContent = wrestlers.length;
+        
+        if (!tbody) {
+            console.error('Could not find rosterTableBody element');
+            return;
+        }
+        
+        if (!wrestlers || wrestlers.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="11" class="text-center text-muted">
+                        No wrestlers match the selected filters.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        // Fetch stats for all wrestlers (batch request would be better, but this works)
+        const wrestlerRows = [];
+        
+        for (const w of wrestlers) {
+            // Get stats for this wrestler
+            let record = '0-0';
+            try {
+                const statsResponse = await fetch(`/api/stats/wrestler/${w.id}`);
+                if (statsResponse.ok) {
+                    const statsData = await statsResponse.json();
+                    const stats = statsData.stats;
+                    record = `${stats.record.wins}-${stats.record.losses}`;
+                    if (stats.record.draws > 0) {
+                        record += `-${stats.record.draws}`;
+                    }
+                }
+            } catch (e) {
+                // If stats fail, use default
+                console.warn(`Failed to load stats for ${w.name}`);
+            }
+            
+            const nameCell = `
+                <strong>${w.name}</strong>
+                ${w.is_major_superstar ? '<span class="badge bg-warning text-dark ms-1">⭐</span>' : ''}
+                ${w.gender === 'Female' ? '<span class="badge bg-info ms-1">♀</span>' : ''}
+            `;
+            
+            const brandBadge = `<span class="badge bg-secondary">${w.primary_brand.replace('ROC ', '')}</span>`;
+            
+            const alignmentClass = w.alignment.toLowerCase();
+            const alignmentCell = `<span class="alignment-${alignmentClass}">${w.alignment}</span>`;
+            
+            const popBadge = `<span class="badge ${getPopularityBadgeClass(w.stats.popularity)}">${w.stats.popularity}</span>`;
+            
+            const momBadge = `<span class="badge ${getMomentumBadgeClass(w.stats.momentum)}">${w.stats.momentum > 0 ? '+' : ''}${w.stats.momentum}</span>`;
+            
+            const injuryCell = getInjuryBadge(w.injury);
+            
+            const contractBadge = w.contract_expires_soon ? 
+                `<span class="badge bg-danger">${w.contract.weeks_remaining}w</span>` : 
+                `<span class="badge bg-secondary">${w.contract.weeks_remaining}w</span>`;
+
+            const morale = w.stats.morale;
+            let moraleBadgeClass = 'bg-success';
+            let moraleIcon = '';
+            if (morale <= 20) { moraleBadgeClass = 'bg-danger'; moraleIcon = '😡'; }
+            else if (morale <= 40) { moraleBadgeClass = 'bg-warning text-dark'; moraleIcon = '😠'; }
+            else if (morale <= 50) { moraleBadgeClass = 'bg-secondary'; moraleIcon = '😐'; }
+            else if (morale <= 69) { moraleBadgeClass = 'bg-info'; moraleIcon = '🙂'; }
+            else { moraleIcon = '😊'; }
+            const moraleBadge = `<span class="badge ${moraleBadgeClass}" title="Morale: ${morale}">${moraleIcon} ${morale}</span>`;
+            
+            wrestlerRows.push(`
+                <tr>
+                    <td>${nameCell}</td>
+                    <td>${brandBadge}</td>
+                    <td>${alignmentCell}</td>
+                    <td>${w.role}</td>
+                    <td><strong>${record}</strong></td>
+                    <td><strong>${w.attributes.overall}</strong></td>
+                    <td>${popBadge}</td>
+                    <td>${momBadge}</td>
+                    <td>${moraleBadge}</td>
+                    <td>${injuryCell}</td>
+                    <td>${contractBadge}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info wrestler-detail-btn" data-wrestler-id="${w.id}">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `);
+        }
+        
+        tbody.innerHTML = wrestlerRows.join('');
+        
+        // Attach event listeners to detail buttons
+        document.querySelectorAll('.wrestler-detail-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const wrestlerId = this.getAttribute('data-wrestler-id');
+                showWrestlerDetail(wrestlerId);
+            });
+        });
+    }
+
+    // Helper functions for badge classes
+    function getPopularityBadgeClass(pop) {
+        if (pop >= 80) return 'bg-success';
+        if (pop >= 60) return 'bg-primary';
+        if (pop >= 40) return 'bg-warning';
+        return 'bg-secondary';
+    }
+
+    function getMomentumBadgeClass(mom) {
+        if (mom >= 20) return 'bg-success';
+        if (mom >= 5) return 'bg-primary';
+        if (mom <= -20) return 'bg-danger';
+        if (mom <= -5) return 'bg-warning';
+        return 'bg-secondary';
+    }
+
+    function getMoraleBadgeClass(morale) {
+        if (morale >= 70) return 'bg-success';
+        if (morale >= 40) return 'bg-primary';
+        if (morale >= 0) return 'bg-warning';
+        return 'bg-danger';
+    }
+
+    function getInjuryBadge(injury) {
+        if (injury.severity === 'None') {
+            return '<span class="badge bg-success">Healthy</span>';
+        }
+        
+        let badgeClass = 'bg-warning';
+        if (injury.severity === 'Major') badgeClass = 'bg-danger';
+        if (injury.severity === 'Moderate') badgeClass = 'bg-warning';
+        
+        return `<span class="badge ${badgeClass}">${injury.severity} (${injury.weeks_remaining}w)</span>`;
+    }
+
+    // Show wrestler detail modal with stats
+    async function showWrestlerDetail(wrestlerId) {
+        console.log('Loading wrestler detail for:', wrestlerId);
+        
+        try {
+            // Fetch wrestler data
+            const wrestlerResponse = await fetch(`/api/roster/${wrestlerId}`);
+            if (!wrestlerResponse.ok) {
+                throw new Error(`HTTP ${wrestlerResponse.status}`);
+            }
+            const wrestler = await wrestlerResponse.json();
+            
+            // Fetch stats
+            const statsResponse = await fetch(`/api/stats/wrestler/${wrestlerId}`);
+            let stats = null;
+            let milestones = [];
+            
+            if (statsResponse.ok) {
+                const statsData = await statsResponse.json();
+                stats = statsData.stats;
+                milestones = statsData.milestones || [];
+            }
+            
+            // Fetch recent matches
+            const matchesResponse = await fetch(`/api/stats/wrestler/${wrestlerId}/matches?limit=5`);
+            let recentMatches = [];
+            
+            if (matchesResponse.ok) {
+                const matchesData = await matchesResponse.json();
+                recentMatches = matchesData.matches || [];
+            }
+            
+            const modalBody = document.getElementById('wrestlerModalBody');
+            const modalTitle = document.getElementById('wrestlerModalTitle');
+            
+            if (!modalBody || !modalTitle) {
+                console.error('Modal elements not found');
+                return;
+            }
+            
+            modalTitle.textContent = wrestler.name;
+            
+            // Build stats section
+            let statsHTML = '';
+            if (stats) {
+                statsHTML = `
+                    <h6 class="mt-3">Career Statistics</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Record:</th>
+                            <td><strong>${stats.record.wins}-${stats.record.losses}-${stats.record.draws}</strong></td>
+                            <th>Win %:</th>
+                            <td><strong>${stats.record.win_percentage.toFixed(1)}%</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Total Matches:</th>
+                            <td>${stats.record.total_matches}</td>
+                            <th>Avg Rating:</th>
+                            <td><strong>${stats.match_quality.average_star_rating.toFixed(2)} ★</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Title Reigns:</th>
+                            <td><strong>${stats.title_history.total_reigns}</strong></td>
+                            <th>Days as Champ:</th>
+                            <td>${stats.title_history.total_days}</td>
+                        </tr>
+                        <tr>
+                            <th>Win Streak:</th>
+                            <td>${stats.streaks.current_win_streak} (best: ${stats.streaks.longest_win_streak})</td>
+                            <th>PPV Matches:</th>
+                            <td>${stats.achievements.ppv_matches}</td>
+                        </tr>
+                    </table>
+                `;
+            } else {
+                statsHTML = `<p class="text-muted">No match history yet.</p>`;
+            }
+            
+            // Build recent matches section
+            let matchesHTML = '';
+            if (recentMatches.length > 0) {
+                matchesHTML = '<h6 class="mt-3">Recent Matches</h6><ul class="list-group list-group-sm">';
+                recentMatches.forEach(match => {
+                    const opponent = match.side_a_names[0] === wrestler.name ? 
+                        match.side_b_names.join(' & ') : 
+                        match.side_a_names.join(' & ');
+                    
+                    matchesHTML += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>
+                                <span class="${match.result_class}"><strong>${match.result}</strong></span>
+                                vs ${opponent}
+                            </span>
+                            <span>
+                                <span class="badge bg-secondary">${match.star_rating} ★</span>
+                                <small class="text-muted ms-2">Week ${match.week}</small>
+                            </span>
+                        </li>
+                    `;
+                });
+                matchesHTML += '</ul>';
+            }
+            
+            // Build milestones section
+            let milestonesHTML = '';
+            if (milestones.length > 0) {
+                milestonesHTML = '<h6 class="mt-3">Career Milestones</h6><ul class="list-group list-group-sm">';
+                milestones.slice(0, 5).forEach(m => {
+                    milestonesHTML += `
+                        <li class="list-group-item">
+                            <strong>${m.description}</strong><br>
+                            <small class="text-muted">${m.achieved_at_show_name} (Year ${m.year}, Week ${m.week})</small>
+                        </li>
+                    `;
+                });
+                milestonesHTML += '</ul>';
+            }
+            
+            modalBody.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Basic Info</h6>
+                        <table class="table table-sm">
+                            <tr><th>Age:</th><td>${wrestler.age} years</td></tr>
+                            <tr><th>Experience:</th><td>${wrestler.years_experience} years</td></tr>
+                            <tr><th>Gender:</th><td>${wrestler.gender}</td></tr>
+                            <tr><th>Brand:</th><td>${wrestler.primary_brand}</td></tr>
+                            <tr><th>Alignment:</th><td><span class="alignment-${wrestler.alignment.toLowerCase()}">${wrestler.alignment}</span></td></tr>
+                            <tr><th>Role:</th><td>${wrestler.role}</td></tr>
+                            <tr><th>Major Star:</th><td>${wrestler.is_major_superstar ? '⭐ Yes' : 'No'}</td></tr>
+                        </table>
+                        
+                        <h6 class="mt-3">Attributes</h6>
+                        <table class="table table-sm">
+                            <tr><th>Overall:</th><td><strong>${wrestler.attributes.overall}</strong></td></tr>
+                            <tr><th>Brawling:</th><td>${wrestler.attributes.brawling}</td></tr>
+                            <tr><th>Technical:</th><td>${wrestler.attributes.technical}</td></tr>
+                            <tr><th>Speed:</th><td>${wrestler.attributes.speed}</td></tr>
+                            <tr><th>Mic:</th><td>${wrestler.attributes.mic}</td></tr>
+                            <tr><th>Psychology:</th><td>${wrestler.attributes.psychology}</td></tr>
+                            <tr><th>Stamina:</th><td>${wrestler.attributes.stamina}</td></tr>
+                        </table>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        ${statsHTML}
+                        
+                        <h6 class="mt-3">Current Stats</h6>
+                        <table class="table table-sm">
+                            <tr><th>Popularity:</th><td>${wrestler.stats.popularity}</td></tr>
+                            <tr><th>Momentum:</th><td>${wrestler.stats.momentum}</td></tr>
+                            <tr><th>Morale:</th><td>${wrestler.stats.morale}</td></tr>
+                            <tr><th>Fatigue:</th><td>${wrestler.stats.fatigue}</td></tr>
+                        </table>
+                        
+                        <h6 class="mt-3">Health</h6>
+                        <table class="table table-sm">
+                            <tr><th>Status:</th><td>${getInjuryBadge(wrestler.injury)}</td></tr>
+                            ${wrestler.injury.severity !== 'None' ? `
+                                <tr><th>Description:</th><td>${wrestler.injury.description}</td></tr>
+                                <tr><th>Return:</th><td>${wrestler.injury.weeks_remaining} weeks</td></tr>
+                            ` : ''}
+                            <tr><th>Can Compete:</th><td>${wrestler.can_compete ? '✅ Yes' : '❌ No'}</td></tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        ${matchesHTML}
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        ${milestonesHTML}
+                    </div>
+                </div>
+
+                <div class="row mt-3" id="behaviorSection_${wrestler.id}">
+                    <div class="col-md-12">
+                        <h6><i class="bi bi-emoji-angry"></i> Locker Room Behavior</h6>
+                        <div id="behaviorDetail_${wrestler.id}" class="text-muted small">
+                            <div class="spinner-border spinner-border-sm me-2"></div> Loading behavior state...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <h6><i class="bi bi-tools"></i> Management Actions</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="holdMeeting('${wrestler.id}', 'listen')">
+                                <i class="bi bi-ear"></i> Listen to Concerns
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="holdMeeting('${wrestler.id}', 'push')">
+                                <i class="bi bi-graph-up-arrow"></i> Promise Push
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="holdMeeting('${wrestler.id}', 'salary')">
+                                <i class="bi bi-cash"></i> Salary Raise
+                            </button>
+                            ${wrestler.stats.morale < 30 ? `
+                            <button class="btn btn-sm btn-outline-danger" onclick="respondReleaseDemand('${wrestler.id}')">
+                                <i class="bi bi-door-open"></i> Handle Release Demand
+                            </button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Load behavior state async
+            loadWrestlerBehavior(wrestler.id);
+            
+            const modal = new bootstrap.Modal(document.getElementById('wrestlerModal'));
+            modal.show();
+            
+        } catch (error) {
+            console.error('Failed to load wrestler details:', error);
+            alert('Failed to load wrestler details: ' + error.message);
+        }
+    }
+
+    // =====================================================================
+    // STEPS 245-253: Morale Behavior Functions
+    // =====================================================================
+
+    async function loadMoraleAlerts() {
+        try {
+            const panel = document.getElementById('moraleBehaviorPanel');
+            const list = document.getElementById('moraleBehaviorList');
+            if (!panel || !list) return;
+
+            const resp = await fetch('/api/morale/behaviors');
+            if (!resp.ok) return;
+            const data = await resp.json();
+
+            if (data.total === 0) {
+                panel.style.display = 'none';
+                return;
+            }
+
+            panel.style.removeProperty('display');
+
+            const severityIcon = { critical: '🚨', high: '⚠️', medium: '💬', low: 'ℹ️' };
+            const severityClass = { critical: 'list-group-item-danger', high: 'list-group-item-warning', medium: 'list-group-item-light', low: '' };
+
+            let html = '';
+            for (const item of data.wrestlers) {
+                for (const beh of item.active_behaviors) {
+                    html += `
+                    <div class="list-group-item ${severityClass[beh.severity] || ''} d-flex justify-content-between align-items-start py-2">
+                        <div class="flex-grow-1">
+                            <strong>${severityIcon[beh.severity] || ''} ${item.wrestler_name}</strong>
+                            <span class="badge bg-secondary ms-1">${item.morale_category}</span>
+                            <span class="badge bg-dark ms-1">Morale: ${item.morale}</span>
+                            ${item.total_match_penalty > 0 ? `<span class="badge bg-danger ms-1">−${item.total_match_penalty}★</span>` : ''}
+                            <br>
+                            <small class="text-muted">${beh.label} — ${beh.description}</small>
+                        </div>
+                        <button class="btn btn-xs btn-outline-primary ms-2" style="font-size:0.75rem;padding:2px 6px"
+                            onclick="showWrestlerDetail('${item.wrestler_id}')">
+                            Details
+                        </button>
+                    </div>`;
+                }
+            }
+            list.innerHTML = html || '<div class="list-group-item text-muted">No active alerts.</div>';
+
+        } catch (e) {
+            console.warn('Could not load morale alerts:', e);
+        }
+    }
+
+    async function loadWrestlerBehavior(wrestlerId) {
+        const el = document.getElementById(`behaviorDetail_${wrestlerId}`);
+        if (!el) return;
+        try {
+            const resp = await fetch(`/api/morale/wrestler/${wrestlerId}`);
+            if (!resp.ok) { el.innerHTML = '<span class="text-muted">Behavior data unavailable.</span>'; return; }
+            const data = await resp.json();
+
+            if (!data.active_behaviors || data.active_behaviors.length === 0) {
+                el.innerHTML = '<span class="text-success">✅ No active behavioral concerns.</span>';
+                return;
+            }
+
+            const severityBadge = { critical: 'danger', high: 'warning', medium: 'secondary', low: 'light' };
+            let html = `<div class="mb-1"><strong>Total Match Penalty: </strong><span class="badge bg-danger">−${data.total_match_penalty}★</span></div>`;
+            for (const beh of data.active_behaviors) {
+                html += `<div class="mb-1">
+                    <span class="badge bg-${severityBadge[beh.severity] || 'secondary'}">${beh.label}</span>
+                    <small class="ms-1 text-muted">${beh.description}</small>
+                </div>`;
+            }
+            el.innerHTML = html;
+        } catch (e) {
+            if (el) el.innerHTML = '<span class="text-muted">Behavior data unavailable.</span>';
+        }
+    }
+
+    async function holdMeeting(wrestlerId, approach) {
+        try {
+            const salaryRaise = approach === 'salary' ? parseInt(prompt('Enter salary raise amount per show ($):', '1000') || '0') : 0;
+            const body = { approach };
+            if (approach === 'salary') body.raise_amount = salaryRaise;
+
+            const resp = await fetch(`/api/morale/wrestler/${wrestlerId}/meet`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const data = await resp.json();
+            if (data.success) {
+                alert(`✅ Meeting held!\n${data.notes.join('\n')}\nMorale: +${data.morale_gain} → ${data.new_morale}`);
+                showWrestlerDetail(wrestlerId);
+                loadMoraleAlerts();
+            } else {
+                alert('Meeting failed: ' + (data.error || 'Unknown error'));
+            }
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    }
+
+    async function respondReleaseDemand(wrestlerId) {
+        const choice = prompt(
+            'Release Demand Response:\n1 = Grant Release\n2 = Refuse (morale −15)\n3 = Negotiate\n\nEnter 1, 2, or 3:'
+        );
+        const actionMap = { '1': 'grant', '2': 'refuse', '3': 'negotiate' };
+        const action = actionMap[choice];
+        if (!action) return;
+
+        const body = { action };
+        if (action === 'negotiate') {
+            const newSalary = parseInt(prompt('Enter new salary per show ($):') || '0');
+            const promise = prompt('Promise (title_shot / push / none):') || 'none';
+            body.new_salary = newSalary;
+            body.promise = promise === 'none' ? null : promise;
+        }
+
+        try {
+            const resp = await fetch(`/api/morale/wrestler/${wrestlerId}/release`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const data = await resp.json();
+            if (data.success) {
+                alert(data.message);
+                showWrestlerDetail(wrestlerId);
+                loadMoraleAlerts();
+                loadRosterData();
+            } else {
+                alert('Error: ' + (data.error || 'Unknown'));
+            }
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    }
+
+    // Load morale alerts on init
+    window.loadMoraleAlerts = loadMoraleAlerts;
+    window.holdMeeting = holdMeeting;
+    window.respondReleaseDemand = respondReleaseDemand;
+    window.loadRosterData = loadRosterData;
+    window.loadSummaryStats = loadSummaryStats;
+    window.showWrestlerDetail = showWrestlerDetail;
+
+    function setupFilterListeners() {
+        document.querySelectorAll('.roster-filter').forEach(filter => {
+            filter.addEventListener('change', () => loadRosterData());
+        });
+    }
+
+    function init() {
+        setupFilterListeners();
+        loadRosterData();
+        loadSummaryStats();
+        loadMoraleAlerts();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        setTimeout(init, 0);
+    }
+
+})();
+</script>

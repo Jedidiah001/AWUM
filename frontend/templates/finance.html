@@ -1,0 +1,758 @@
+<div class="row mb-3">
+    <div class="col-md-12">
+        <h2><i class="bi bi-bank"></i> Finance & Business Operations</h2>
+        <p class="lead">Manage revenue streams, operating costs, pricing, partnerships, merchandise, capital, and financial risk.</p>
+        <hr>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-2">
+        <div class="card border-primary h-100">
+            <div class="card-body">
+                <small class="text-muted d-block">Cash Balance</small>
+                <h4 id="financeBalance">$0</h4>
+                <small class="text-muted" id="financePeriod">Year 1 • Week 1</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card border-success h-100">
+            <div class="card-body">
+                <small class="text-muted d-block">Weekly P/L</small>
+                <h4 id="financeWeeklyProfit">$0</h4>
+                <small class="text-muted">Current cycle</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card border-info h-100">
+            <div class="card-body">
+                <small class="text-muted d-block">Monthly P/L</small>
+                <h4 id="financeMonthlyProfit">$0</h4>
+                <small class="text-muted">4-week rollup</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card border-warning h-100">
+            <div class="card-body">
+                <small class="text-muted d-block">Average Rating</small>
+                <h4 id="financeAverageRating">0.00</h4>
+                <small class="text-muted">Show quality leverage</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card border-danger h-100">
+            <div class="card-body">
+                <small class="text-muted d-block">Risk Level</small>
+                <h4 id="financeRiskLevel">Low</h4>
+                <small class="text-muted" id="financeRunway">Runway: 0 weeks</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card border-secondary h-100">
+            <div class="card-body">
+                <small class="text-muted d-block">Economic Outlook</small>
+                <h4 id="financeOutlook">Stable</h4>
+                <small class="text-muted" id="financeInflation">Inflation 0.0%</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Revenue Streams</h5>
+            </div>
+            <div class="card-body">
+                <div id="revenueStreamsTable"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-receipt-cutoff"></i> Expense Categories</h5>
+            </div>
+            <div class="card-body">
+                <div id="expenseCategoriesTable"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Financial Difficulty</h5>
+            </div>
+            <div class="card-body">
+                <div id="difficultyWarnings"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-sliders"></i> Budget Allocation & Pricing</h5>
+            </div>
+            <div class="card-body">
+                <form id="financeSettingsForm" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">PPV Price</label>
+                        <input type="number" class="form-control" id="ppvPriceInput" min="10" step="0.01">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Floor Ticket</label>
+                        <input type="number" class="form-control" id="ticketFloorInput" min="10" step="1">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Premium Ticket</label>
+                        <input type="number" class="form-control" id="ticketPremiumInput" min="10" step="1">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Salary Budget</label>
+                        <input type="number" class="form-control" id="budgetSalariesInput" min="0" step="1000">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Production Budget</label>
+                        <input type="number" class="form-control" id="budgetProductionInput" min="0" step="1000">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Venue Budget</label>
+                        <input type="number" class="form-control" id="budgetVenueInput" min="0" step="1000">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Staff Budget</label>
+                        <input type="number" class="form-control" id="budgetStaffInput" min="0" step="1000">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Travel Budget</label>
+                        <input type="number" class="form-control" id="budgetTravelInput" min="0" step="1000">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Marketing Budget</label>
+                        <input type="number" class="form-control" id="budgetMarketingInput" min="0" step="1000">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Merch Budget</label>
+                        <input type="number" class="form-control" id="budgetMerchInput" min="0" step="1000">
+                    </div>
+                    <div class="col-12 d-flex justify-content-between align-items-center">
+                        <small class="text-muted">Overspending warnings are calculated against the current weekly P&amp;L.</small>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Save Settings
+                        </button>
+                    </div>
+                </form>
+                <div class="mt-3" id="budgetStatusTable"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-globe2"></i> Economic Simulation</h5>
+            </div>
+            <div class="card-body" id="economicIndicators"></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-broadcast"></i> TV Rights Negotiations</h5>
+            </div>
+            <div class="card-body">
+                <form id="tvRightsForm" class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Network Name</label>
+                        <input type="text" class="form-control" id="tvNetworkInput" value="Global Sports One">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Market Size</label>
+                        <input type="number" class="form-control" id="tvMarketSizeInput" value="70" min="1" max="100">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Content Quality</label>
+                        <input type="number" class="form-control" id="tvContentQualityInput" value="75" min="1" max="100">
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Requirement</label>
+                        <input type="text" class="form-control" id="tvRequirementInput" value="Prime-time consistency">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Duration (weeks)</label>
+                        <input type="number" class="form-control" id="tvDurationInput" value="26" min="4" step="1">
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-dark">
+                            <i class="bi bi-handshake"></i> Negotiate Deal
+                        </button>
+                    </div>
+                </form>
+                <div class="mt-3" id="tvDealsTable"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-megaphone"></i> Sponsorship Deals</h5>
+            </div>
+            <div class="card-body">
+                <form id="sponsorshipForm" class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Sponsor</label>
+                        <input type="text" class="form-control" id="sponsorNameInput" value="Northstar Energy">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Category</label>
+                        <input type="text" class="form-control" id="sponsorCategoryInput" value="Consumer Brand">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Content Restriction</label>
+                        <input type="text" class="form-control" id="sponsorRestrictionInput" value="Avoid excessive gore">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Promo Obligation</label>
+                        <input type="text" class="form-control" id="sponsorObligationInput" value="Two mentions per weekly show">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Duration (weeks)</label>
+                        <input type="number" class="form-control" id="sponsorDurationInput" value="16" min="4" step="1">
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-building"></i> Secure Sponsor
+                        </button>
+                    </div>
+                </form>
+                <div class="mt-3" id="sponsorshipDealsTable"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-bag"></i> Merchandise Production</h5>
+            </div>
+            <div class="card-body">
+                <form id="merchForm" class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Wrestler ID (optional)</label>
+                        <input type="text" class="form-control" id="merchWrestlerIdInput" placeholder="Leave blank for company merch">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Item Name</label>
+                        <input type="text" class="form-control" id="merchItemNameInput" value="ROC Signature Tee">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Category</label>
+                        <input type="text" class="form-control" id="merchCategoryInput" value="Apparel">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Unit Cost</label>
+                        <input type="number" class="form-control" id="merchUnitCostInput" value="12" min="1" step="0.01">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Unit Price</label>
+                        <input type="number" class="form-control" id="merchUnitPriceInput" value="30" min="1" step="0.01">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Inventory</label>
+                        <input type="number" class="form-control" id="merchInventoryInput" value="100" min="10" step="10">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Hype Score</label>
+                        <input type="number" class="form-control" id="merchHypeInput" value="65" min="1" max="100">
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-box-seam"></i> Produce Merch
+                        </button>
+                    </div>
+                </form>
+                <div class="mt-3" id="merchandiseTable"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-cash-coin"></i> Loan & Investment System</h5>
+            </div>
+            <div class="card-body">
+                <form id="capitalForm" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Instrument</label>
+                        <select class="form-select" id="capitalTypeInput">
+                            <option value="loan">Loan</option>
+                            <option value="investment">Investment</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Counterparty</label>
+                        <input type="text" class="form-control" id="capitalCounterpartyInput" value="Commonwealth Bank">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Principal</label>
+                        <input type="number" class="form-control" id="capitalPrincipalInput" value="100000" min="10000" step="10000">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Duration (weeks)</label>
+                        <input type="number" class="form-control" id="capitalDurationInput" value="26" min="4" step="1">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Rate / Equity %</label>
+                        <input type="number" class="form-control" id="capitalRateInput" value="7.5" min="0" step="0.1">
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-wallet2"></i> Add Capital
+                        </button>
+                    </div>
+                </form>
+                <div class="mt-3" id="capitalTable"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar-week"></i> Weekly Profit/Loss Statements</h5>
+            </div>
+            <div class="card-body" id="weeklyReportsTable"></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar-month"></i> Monthly Profit/Loss Statements</h5>
+            </div>
+            <div class="card-body" id="monthlyReportsTable"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    let financeDashboard = null;
+
+    function currency(value) {
+        const amount = Number(value || 0);
+        const sign = amount < 0 ? '-' : '';
+        return `${sign}$${Math.abs(Math.round(amount)).toLocaleString()}`;
+    }
+
+    function pct(value) {
+        return `${Number(value || 0).toFixed(1)}%`;
+    }
+
+    function badge(text, type) {
+        return `<span class="badge bg-${type} me-1">${text}</span>`;
+    }
+
+    async function apiRequest(url, options) {
+        const response = await fetch(url, options);
+        const data = await response.json();
+        if (!response.ok || data.success === false) {
+            throw new Error(data.error || 'Request failed');
+        }
+        return data;
+    }
+
+    async function loadFinanceDashboard() {
+        financeDashboard = await apiRequest('/api/finance/dashboard');
+        renderOverview(financeDashboard);
+        renderTables(financeDashboard);
+        hydrateForms(financeDashboard.settings);
+    }
+
+    function renderOverview(data) {
+        const overview = data.overview;
+        const difficulty = data.difficulty;
+        const economy = data.economy;
+
+        document.getElementById('financeBalance').textContent = currency(overview.balance);
+        document.getElementById('financePeriod').textContent = `Year ${overview.year} • Week ${overview.week}`;
+        document.getElementById('financeWeeklyProfit').textContent = currency(overview.weekly_profit);
+        document.getElementById('financeMonthlyProfit').textContent = currency(overview.monthly_profit);
+        document.getElementById('financeAverageRating').textContent = Number(overview.average_show_rating || 0).toFixed(2);
+        document.getElementById('financeRiskLevel').textContent = difficulty.risk_level;
+        document.getElementById('financeRunway').textContent = `Runway: ${difficulty.projected_runway_weeks} weeks`;
+        document.getElementById('financeOutlook').textContent = economy.outlook;
+        document.getElementById('financeInflation').textContent = `Inflation ${economy.inflation_rate}%`;
+    }
+
+    function renderBreakdownTable(targetId, rows, label) {
+        const target = document.getElementById(targetId);
+        if (!rows || !rows.length) {
+            target.innerHTML = `<div class="text-muted">No ${label.toLowerCase()} available yet.</div>`;
+            return;
+        }
+        target.innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr><th>${label}</th><th class="text-end">Amount</th></tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(row => `
+                        <tr>
+                            <td>${String(row.category).replace(/_/g, ' ')}</td>
+                            <td class="text-end fw-semibold">${currency(row.amount)}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+    }
+
+    function renderBudgetStatus(rows) {
+        const target = document.getElementById('budgetStatusTable');
+        target.innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th class="text-end">Budget</th>
+                            <th class="text-end">Actual</th>
+                            <th class="text-end">Variance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(row => `
+                        <tr class="${row.over_budget ? 'table-warning' : ''}">
+                            <td>${String(row.category).replace(/_/g, ' ')}</td>
+                            <td class="text-end">${currency(row.limit)}</td>
+                            <td class="text-end">${currency(row.actual)}</td>
+                            <td class="text-end ${row.variance > 0 ? 'text-danger' : 'text-success'}">${currency(row.variance)}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+    }
+
+    function renderEconomicIndicators(economy) {
+        document.getElementById('economicIndicators').innerHTML = `
+            <div class="row g-3">
+                <div class="col-md-6">${renderIndicator('Consumer Confidence', economy.consumer_confidence)}</div>
+                <div class="col-md-6">${renderIndicator('Media Rights Market', economy.media_rights_index)}</div>
+                <div class="col-md-6">${renderIndicator('Sponsorship Demand', economy.sponsorship_market)}</div>
+                <div class="col-md-6">${renderIndicator('Merch Demand', economy.merchandise_demand)}</div>
+            </div>
+            <div class="alert alert-info mt-3 mb-0">
+                <strong>External economy:</strong> ${economy.outlook} conditions with ${economy.inflation_rate}% inflation.
+            </div>`;
+    }
+
+    function renderIndicator(label, value) {
+        const tone = value >= 75 ? 'success' : value >= 55 ? 'warning' : 'danger';
+        return `
+            <div class="border rounded p-3 h-100">
+                <small class="text-muted d-block">${label}</small>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <strong>${pct(value)}</strong>
+                    <span class="badge bg-${tone}">${value >= 75 ? 'Hot' : value >= 55 ? 'Mixed' : 'Soft'}</span>
+                </div>
+                <div class="progress" style="height: 8px;">
+                    <div class="progress-bar bg-${tone}" style="width:${Math.max(0, Math.min(100, value))}%"></div>
+                </div>
+            </div>`;
+    }
+
+    function renderWarnings(difficulty) {
+        const warnings = difficulty.warnings || [];
+        const consequences = difficulty.consequences || [];
+        document.getElementById('difficultyWarnings').innerHTML = `
+            <div class="mb-3">${badge(`Risk: ${difficulty.risk_level}`, difficulty.risk_level === 'High' ? 'danger' : difficulty.risk_level === 'Medium' ? 'warning' : 'success')}</div>
+            <div class="mb-3">
+                <strong class="d-block mb-1">Warnings</strong>
+                ${warnings.length ? `<ul class="mb-0">${warnings.map(item => `<li>${item}</li>`).join('')}</ul>` : '<div class="text-muted">No active financial warnings.</div>'}
+            </div>
+            <div>
+                <strong class="d-block mb-1">Consequences</strong>
+                ${consequences.length ? `<ul class="mb-0">${consequences.map(item => `<li>${item}</li>`).join('')}</ul>` : '<div class="text-muted">No immediate hardship consequences.</div>'}
+            </div>`;
+    }
+
+    function renderDeals(targetId, rows, primaryName) {
+        const target = document.getElementById(targetId);
+        if (!rows || !rows.length) {
+            target.innerHTML = '<div class="text-muted">No active deals.</div>';
+            return;
+        }
+        target.innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>${primaryName}</th>
+                            <th class="text-end">Weekly Fee</th>
+                            <th class="text-end">Weeks Left</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(row => `
+                        <tr>
+                            <td>
+                                <strong>${row.network_name || row.sponsor_name}</strong>
+                                <div class="small text-muted">${row.content_requirement || row.content_restriction || row.promo_obligation || ''}</div>
+                            </td>
+                            <td class="text-end">${currency(row.weekly_fee)}</td>
+                            <td class="text-end">${row.weeks_remaining}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+    }
+
+    function renderMerchandise(merchandise) {
+        const target = document.getElementById('merchandiseTable');
+        const items = merchandise.items || [];
+        if (!items.length) {
+            target.innerHTML = '<div class="text-muted">No merchandise lines yet.</div>';
+            return;
+        }
+        target.innerHTML = `
+            <div class="mb-2">
+                ${badge(`Projected weekly merch revenue ${currency(merchandise.projected_weekly_revenue)}`, 'success')}
+                ${badge(`Projected units ${merchandise.projected_weekly_units}`, 'secondary')}
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th class="text-end">Inventory</th>
+                            <th class="text-end">Projected Units</th>
+                            <th class="text-end">Projected Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map(item => `
+                        <tr>
+                            <td>
+                                <strong>${item.item_name}</strong>
+                                <div class="small text-muted">${item.wrestler_name || 'Company line'} • ${item.category}</div>
+                            </td>
+                            <td class="text-end">${item.inventory}</td>
+                            <td class="text-end">${item.projected_units}</td>
+                            <td class="text-end">${currency(item.projected_revenue)}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+    }
+
+    function renderCapital(rows) {
+        const target = document.getElementById('capitalTable');
+        if (!rows || !rows.length) {
+            target.innerHTML = '<div class="text-muted">No active loans or investors.</div>';
+            return;
+        }
+        target.innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Counterparty</th>
+                            <th>Instrument</th>
+                            <th class="text-end">Principal</th>
+                            <th class="text-end">Weekly Obligation</th>
+                            <th class="text-end">Weeks Left</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(row => `
+                        <tr>
+                            <td>${row.counterparty}</td>
+                            <td>${String(row.instrument_type).replace(/_/g, ' ')}</td>
+                            <td class="text-end">${currency(row.principal)}</td>
+                            <td class="text-end">${row.instrument_type === 'investment' ? `${row.equity_pct}% equity` : currency(row.weekly_payment)}</td>
+                            <td class="text-end">${row.weeks_remaining}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+    }
+
+    function renderReports(targetId, rows) {
+        const target = document.getElementById(targetId);
+        if (!rows || !rows.length) {
+            target.innerHTML = '<div class="text-muted">No reports yet.</div>';
+            return;
+        }
+        target.innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th class="text-end">Revenue</th>
+                            <th class="text-end">Expenses</th>
+                            <th class="text-end">Profit</th>
+                            <th class="text-end">Trend</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(row => `
+                        <tr>
+                            <td>${row.period}</td>
+                            <td class="text-end">${currency(row.revenue_total)}</td>
+                            <td class="text-end">${currency(row.expense_total)}</td>
+                            <td class="text-end ${row.profit >= 0 ? 'text-success' : 'text-danger'}">${currency(row.profit)}</td>
+                            <td class="text-end ${row.trend_delta >= 0 ? 'text-success' : 'text-danger'}">${currency(row.trend_delta)}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+    }
+
+    function renderTables(data) {
+        renderBreakdownTable('revenueStreamsTable', data.revenue_streams, 'Revenue');
+        renderBreakdownTable('expenseCategoriesTable', data.expense_categories, 'Expense');
+        renderWarnings(data.difficulty);
+        renderBudgetStatus(data.budget_allocations);
+        renderEconomicIndicators(data.economy);
+        renderDeals('tvDealsTable', data.tv_rights, 'Network');
+        renderDeals('sponsorshipDealsTable', data.sponsorships, 'Sponsor');
+        renderMerchandise(data.merchandise);
+        renderCapital(data.capital);
+        renderReports('weeklyReportsTable', data.reports.weekly);
+        renderReports('monthlyReportsTable', data.reports.monthly);
+    }
+
+    function hydrateForms(settings) {
+        const budgets = settings.budget_allocations;
+        const tickets = settings.ticket_tiers;
+        document.getElementById('ppvPriceInput').value = settings.ppv_price;
+        document.getElementById('ticketFloorInput').value = tickets.floor;
+        document.getElementById('ticketPremiumInput').value = tickets.premium;
+        document.getElementById('budgetSalariesInput').value = budgets.wrestler_salaries;
+        document.getElementById('budgetProductionInput').value = budgets.production_expenses;
+        document.getElementById('budgetVenueInput').value = budgets.venue_rentals;
+        document.getElementById('budgetStaffInput').value = budgets.staff_payroll;
+        document.getElementById('budgetTravelInput').value = budgets.travel;
+        document.getElementById('budgetMarketingInput').value = budgets.marketing;
+        document.getElementById('budgetMerchInput').value = budgets.merchandise_production;
+    }
+
+    document.getElementById('financeSettingsForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        await apiRequest('/api/finance/settings', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                ppv_price: Number(document.getElementById('ppvPriceInput').value),
+                ticket_tiers: {
+                    floor: Number(document.getElementById('ticketFloorInput').value),
+                    premium: Number(document.getElementById('ticketPremiumInput').value),
+                    lower_bowl: financeDashboard.settings.ticket_tiers.lower_bowl,
+                    upper_bowl: financeDashboard.settings.ticket_tiers.upper_bowl
+                },
+                budget_allocations: {
+                    wrestler_salaries: Number(document.getElementById('budgetSalariesInput').value),
+                    production_expenses: Number(document.getElementById('budgetProductionInput').value),
+                    venue_rentals: Number(document.getElementById('budgetVenueInput').value),
+                    staff_payroll: Number(document.getElementById('budgetStaffInput').value),
+                    travel: Number(document.getElementById('budgetTravelInput').value),
+                    marketing: Number(document.getElementById('budgetMarketingInput').value),
+                    merchandise_production: Number(document.getElementById('budgetMerchInput').value)
+                }
+            })
+        });
+        await loadFinanceDashboard();
+    });
+
+    document.getElementById('tvRightsForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        await apiRequest('/api/finance/tv-rights/negotiate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                network_name: document.getElementById('tvNetworkInput').value,
+                market_size: Number(document.getElementById('tvMarketSizeInput').value),
+                content_quality: Number(document.getElementById('tvContentQualityInput').value),
+                duration_weeks: Number(document.getElementById('tvDurationInput').value),
+                content_requirement: document.getElementById('tvRequirementInput').value
+            })
+        });
+        await loadFinanceDashboard();
+    });
+
+    document.getElementById('sponsorshipForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        await apiRequest('/api/finance/sponsorships', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                sponsor_name: document.getElementById('sponsorNameInput').value,
+                category: document.getElementById('sponsorCategoryInput').value,
+                duration_weeks: Number(document.getElementById('sponsorDurationInput').value),
+                content_restriction: document.getElementById('sponsorRestrictionInput').value,
+                promo_obligation: document.getElementById('sponsorObligationInput').value
+            })
+        });
+        await loadFinanceDashboard();
+    });
+
+    document.getElementById('merchForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        await apiRequest('/api/finance/merchandise', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                wrestler_id: document.getElementById('merchWrestlerIdInput').value || null,
+                item_name: document.getElementById('merchItemNameInput').value,
+                category: document.getElementById('merchCategoryInput').value,
+                unit_cost: Number(document.getElementById('merchUnitCostInput').value),
+                unit_price: Number(document.getElementById('merchUnitPriceInput').value),
+                inventory: Number(document.getElementById('merchInventoryInput').value),
+                hype_score: Number(document.getElementById('merchHypeInput').value)
+            })
+        });
+        await loadFinanceDashboard();
+    });
+
+    document.getElementById('capitalForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        await apiRequest('/api/finance/capital', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                instrument_type: document.getElementById('capitalTypeInput').value,
+                counterparty: document.getElementById('capitalCounterpartyInput').value,
+                principal: Number(document.getElementById('capitalPrincipalInput').value),
+                duration_weeks: Number(document.getElementById('capitalDurationInput').value),
+                interest_rate: Number(document.getElementById('capitalRateInput').value),
+                equity_pct: Number(document.getElementById('capitalRateInput').value)
+            })
+        });
+        await loadFinanceDashboard();
+    });
+
+    loadFinanceDashboard().catch(function(error) {
+        console.error('Failed to load finance dashboard:', error);
+        document.querySelector('.row').insertAdjacentHTML(
+            'beforebegin',
+            `<div class="alert alert-danger">Failed to load finance dashboard: ${error.message}</div>`
+        );
+    });
+})();
+</script>
