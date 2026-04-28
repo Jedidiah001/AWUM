@@ -39,6 +39,98 @@ def _jdumps(v):
     return json.dumps(v, ensure_ascii=False)
 
 
+def _future_year_week(year: int, week: int, add_weeks: int) -> tuple[int, int]:
+    total_weeks = (year - 1) * 52 + week + add_weeks
+    future_year = ((total_weeks - 1) // 52) + 1
+    future_week = ((total_weeks - 1) % 52) + 1
+    return future_year, future_week
+
+
+def _is_expired(cur_year: int, cur_week: int, exp_year: int, exp_week: int) -> bool:
+    return (cur_year, cur_week) > (exp_year, exp_week)
+
+
+def _apply_consequences(feed_id: str, headline: str, impact: dict, significance: int, year: int, week: int):
+    """
+    Phase B consequence engine:
+    - mirrors story into media/sentiment logs
+    - creates persistent timed world modifiers (buzz multipliers and deltas)
+    """
+    cur = _cursor()
+    created_at = _now()
+
+    # Mirror to media coverage
+    cur.execute(
+        """
+        INSERT INTO media_ecosystem_log (
+            item_id, item_type, year, week, title, subject_ref, impact_score, payload_json, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            f"media_{uuid.uuid4().hex[:12]}",
+            "world_feed_story",
+            year,
+            week,
+            headline,
+            feed_id,
+            float(significance),
+            _jdumps({"impact": impact}),
+            created_at,
+        ),
+    )
+
+    # Mirror to industry sentiment
+    sentiment_score = float(impact.get("buzz_delta", 0)) + float(impact.get("ratings_delta", 0))
+    cur.execute(
+        """
+        INSERT INTO industry_sentiment_log (
+            sentiment_id, source_type, source_name, headline, sentiment_score,
+            credibility, payload_json, year, week, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            f"sent_{uuid.uuid4().hex[:12]}",
+            "world_feed",
+            "KNN",
+            headline,
+            sentiment_score,
+            60.0 + min(40.0, significance * 8.0),
+            _jdumps({"impact": impact, "feed_id": feed_id}),
+            year,
+            week,
+            created_at,
+        ),
+    )
+
+    # Persistent world modifiers
+    duration_weeks = max(1, min(8, significance + 1))
+    exp_year, exp_week = _future_year_week(year, week, duration_weeks)
+    for effect_key, raw in (impact or {}).items():
+        value = float(raw or 0.0)
+        if abs(value) < 0.01:
+            continue
+        cur.execute(
+            """
+            INSERT INTO world_modifiers (
+                modifier_id, effect_key, effect_value, source_feed_id, source_headline,
+                starts_year, starts_week, expires_year, expires_week, is_active, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+            """,
+            (
+                f"wm_{uuid.uuid4().hex[:12]}",
+                effect_key,
+                value,
+                feed_id,
+                headline,
+                year,
+                week,
+                exp_year,
+                exp_week,
+                created_at,
+            ),
+        )
+
+
 def _story_from_evolve_event(event: dict) -> dict:
     payload = _jloads(event.get("payload_json"), {})
     et = event.get("event_type", "generic")
@@ -154,6 +246,8 @@ def world_tick():
             ),
         )
 
+        _apply_consequences(feed_id, story["headline"], story["impact"], int(story.get("significance", 1)), year, week)
+
         if int(story.get("significance", 1)) >= 4:
             cur.execute(
                 """
@@ -205,6 +299,7 @@ def world_tick():
                 _now(),
             ),
         )
+        _apply_consequences(feed_id, ambience_headline, {"buzz_delta": 0}, 1, year, week)
         created.append(feed_id)
 
     _db().conn.commit()
@@ -246,3 +341,43 @@ def get_world_feed():
         rows.append(d)
 
     return jsonify({"ok": True, "items": rows})
+
+
+@world_feed_bp.route("/api/world/modifiers", methods=["GET"])
+def get_world_modifiers():
+    """
+    Phase B live consequences endpoint:
+    returns active modifiers + aggregated totals.
+    """
+    cur = _cursor()
+    year, week = _year_week()
+
+    cur.execute("SELECT * FROM world_modifiers WHERE is_active=1 ORDER BY created_at DESC")
+    all_mods = [dict(r) for r in cur.fetchall()]
+
+    active = []
+    expired_ids = []
+    for m in all_mods:
+        if _is_expired(year, week, int(m["expires_year"]), int(m["expires_week"])):
+            expired_ids.append(m["modifier_id"])
+        else:
+            active.append(m)
+
+    if expired_ids:
+        cur.executemany("UPDATE world_modifiers SET is_active=0 WHERE modifier_id=?", [(mid,) for mid in expired_ids])
+        _db().conn.commit()
+
+    totals = {}
+    for m in active:
+        k = m.get("effect_key", "unknown")
+        totals[k] = float(totals.get(k, 0.0)) + float(m.get("effect_value", 0.0))
+
+    return jsonify(
+        {
+            "ok": True,
+            "year": year,
+            "week": week,
+            "active_modifiers": active,
+            "totals": totals,
+        }
+    )

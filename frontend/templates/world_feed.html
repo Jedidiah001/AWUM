@@ -40,6 +40,11 @@
           <li>Auto-promotes high-significance items into historical moments.</li>
         </ul>
       </div>
+      <div class="card p-3 mt-3">
+        <h5>Active World Modifiers</h5>
+        <div id="wfModifierTotals" class="small subtle mb-2">No active modifiers.</div>
+        <div id="wfModifierList" style="max-height:220px; overflow:auto"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -78,12 +83,39 @@
     }).join('');
   }
 
+  function renderModifiers(data){
+    const totals = data.totals || {};
+    const mods = data.active_modifiers || [];
+    const totalsRoot = document.getElementById('wfModifierTotals');
+    const listRoot = document.getElementById('wfModifierList');
+
+    const totalEntries = Object.entries(totals);
+    totalsRoot.innerHTML = totalEntries.length
+      ? totalEntries.map(([k,v])=>`<div><code>${esc(k)}</code>: ${Number(v).toFixed(2)}</div>`).join('')
+      : 'No active modifiers.';
+
+    listRoot.innerHTML = mods.length
+      ? mods.map(m=>`
+          <div class=\"border-bottom border-secondary py-1 small\">
+            <div><code>${esc(m.effect_key)}</code> ${Number(m.effect_value||0).toFixed(2)}</div>
+            <div class=\"subtle\">from: ${esc(m.source_headline)}</div>
+            <div class=\"subtle\">expires: Y${esc(m.expires_year)} W${esc(m.expires_week)}</div>
+          </div>
+        `).join('')
+      : `<div class=\"small subtle\">No active modifier rows.</div>`;
+  }
+
   async function loadFeed(){
     const data = await api('/api/world/feed?limit=50');
     const items = data.items || [];
     renderItems(items);
     if(items.length) latestSeen = items[0].created_at;
     document.getElementById('wfLastSync').textContent = `Synced ${new Date().toLocaleTimeString()}`;
+  }
+
+  async function loadModifiers(){
+    const data = await api('/api/world/modifiers');
+    renderModifiers(data);
   }
 
   async function runTick(){
@@ -94,6 +126,7 @@
       body: JSON.stringify({max_items})
     });
     await loadFeed();
+    await loadModifiers();
     alert(`World tick complete: ${out.created} story item(s) generated.`);
   }
 
@@ -101,13 +134,16 @@
   document.getElementById('wfTickBtn').addEventListener('click', runTick);
   document.getElementById('wfRunTickPrimary').addEventListener('click', runTick);
 
-  loadFeed().catch(err=>{
+  Promise.all([loadFeed(), loadModifiers()]).catch(err=>{
     console.error(err);
     alert(`World Feed failed to load: ${err.message}`);
   });
 
   // Real-time polling
-  pollId = setInterval(loadFeed, 8000);
+  pollId = setInterval(()=>{
+    loadFeed().catch(console.error);
+    loadModifiers().catch(console.error);
+  }, 8000);
   window.viewCleanup = function(){
     if(pollId) clearInterval(pollId);
   };

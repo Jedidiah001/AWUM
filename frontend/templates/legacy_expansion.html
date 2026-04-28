@@ -38,6 +38,16 @@
 
   <div class="row g-3 mb-4" id="legacySummaryCards"></div>
 
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong>World Consequence Totals (Phase B)</strong>
+      <small class="legacy-subtle">Live aggregated modifiers</small>
+    </div>
+    <div class="card-body" id="legacyWorldTotals">
+      <div class="legacy-subtle">Loading modifier totals...</div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
       <strong>Table Status</strong>
@@ -117,11 +127,24 @@
       });
       tbody.innerHTML = rows.join('') || `<tr><td colspan="3" class="text-center text-muted py-4">No table data available.</td></tr>`;
       document.getElementById('legacyLastSync').textContent = `Synced ${new Date().toLocaleTimeString()}`;
+      await loadWorldTotals();
     } catch (err) {
       console.error(err);
       summary.innerHTML = `<div class="col-12"><div class="alert alert-danger">${err.message}</div></div>`;
       tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">Failed to load legacy overview.</td></tr>`;
     }
+  }
+
+  async function loadWorldTotals() {
+    const root = document.getElementById('legacyWorldTotals');
+    const res = await fetch('/api/world/modifiers');
+    if (!res.ok) throw new Error(`world modifiers failed: ${res.status}`);
+    const data = await res.json();
+    const totals = data.totals || {};
+    const entries = Object.entries(totals);
+    root.innerHTML = entries.length
+      ? entries.map(([k,v]) => `<div><code>${k}</code>: ${Number(v).toFixed(2)}</div>`).join('')
+      : `<div class="legacy-subtle">No active world modifiers.</div>`;
   }
 
   document.getElementById('legacyRefreshBtn')?.addEventListener('click', loadLegacyOverview);
