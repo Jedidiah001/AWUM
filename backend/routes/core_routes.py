@@ -16,6 +16,66 @@ def get_universe():
     return current_app.config['UNIVERSE']
 
 
+def _sync_house_shows_into_calendar(universe, database):
+    """
+    Ensure planned house shows from SQLite are represented in calendar.generated_shows.
+    This keeps House Show tours visible after page refresh/server restart.
+    """
+    try:
+        cursor = database.conn.cursor()
+        exists = cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='house_shows'"
+        ).fetchone()
+        if not exists:
+            return
+
+        from models.calendar import ScheduledShow
+
+        rows = cursor.execute(
+            """
+            SELECT house_show_id, brand, city, year, week, status
+            FROM house_shows
+            WHERE status IN ('planned', 'booked')
+            ORDER BY year, week
+            """
+        ).fetchall()
+
+        by_id = {s.show_id: s for s in universe.calendar.generated_shows}
+        for r in rows:
+            show_id = r['house_show_id']
+            show_name = f"{r['brand']} House Show — {r['city']}"
+            if show_id in by_id:
+                # Refresh mutable fields in case city/brand changed.
+                existing = by_id[show_id]
+                existing.year = int(r['year'])
+                existing.week = int(r['week'])
+                existing.brand = r['brand']
+                existing.name = show_name
+                existing.show_type = 'house_show'
+                existing.is_ppv = False
+                existing.tier = 'house'
+                if hasattr(existing, 'day_of_week'):
+                    existing.day_of_week = 'Saturday'
+                continue
+
+            universe.calendar.generated_shows.append(
+                ScheduledShow(
+                    show_id=show_id,
+                    year=int(r['year']),
+                    week=int(r['week']),
+                    day_of_week='Saturday',
+                    brand=r['brand'],
+                    name=show_name,
+                    show_type='house_show',
+                    is_ppv=False,
+                    tier='house',
+                )
+            )
+    except Exception:
+        # Never break core calendar endpoints due to house show sync issues.
+        pass
+
+
 # ============================================================================
 # API STATUS
 # ============================================================================
@@ -39,6 +99,8 @@ def api_status():
 @core_bp.route('/api/universe/state')
 def api_universe_state():
     universe = get_universe()
+    database = get_database()
+    _sync_house_shows_into_calendar(universe, database)
     
     current_show = universe.calendar.get_current_show()
     next_show = universe.calendar.get_next_show()
@@ -81,6 +143,7 @@ def api_advance_universe():
 @core_bp.route('/api/calendar/current')
 def api_calendar_current():
     universe = get_universe()
+    _sync_house_shows_into_calendar(universe, get_database())
     return jsonify(universe.calendar.to_dict())
 
 
@@ -110,6 +173,7 @@ def api_calendar_upcoming_ppvs():
 @core_bp.route('/api/calendar/shows')
 def api_calendar_shows():
     universe = get_universe()
+    _sync_house_shows_into_calendar(universe, get_database())
     start = request.args.get('start', 0, type=int)
     limit = request.args.get('limit', 20, type=int)
     
@@ -133,6 +197,7 @@ def api_calendar_schedule():
     """
     database = get_database()
     universe = get_universe()
+    _sync_house_shows_into_calendar(universe, database)
 
     start = request.args.get('start', 0, type=int)
     limit = request.args.get('limit', 60, type=int)

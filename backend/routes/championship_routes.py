@@ -107,7 +107,11 @@ def api_get_all_championships():
 
             # Improve Tag Team title display: show team name and both members when possible.
             try:
-                if champ_dict.get('title_type') == 'Tag Team' and not champ_dict.get('is_vacant'):
+                is_tag = (
+                    champ_dict.get('is_tag_team') or
+                    str(champ_dict.get('title_type', '')).lower().replace('-', ' ') == 'tag team'
+                )
+                if is_tag and not champ_dict.get('is_vacant'):
                     holder_id = champ_dict.get('current_holder_id')
                     team = None
                     if holder_id and str(holder_id).startswith('team_'):
