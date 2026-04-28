@@ -12,6 +12,8 @@
       <div class="subtle">Steps 171-182: performance center, roster, trainers, curriculum, progression, tryouts, shows, call-ups, send-downs, injuries, excursions.</div>
     </div>
     <div class="d-flex gap-2">
+      <span class="badge text-bg-success" id="evolveLiveBadge">Live Sync ON</span>
+      <span class="small subtle align-self-center" id="evolveLastSync">Never synced</span>
       <button class="btn btn-outline-light btn-sm" id="evolveRefreshBtn">Refresh</button>
       <button class="btn btn-warning btn-sm" id="runProgressionBtn">Run Weekly Progression</button>
       <button class="btn btn-info btn-sm" id="runDevShowBtn">Run Evolve Show</button>
@@ -102,6 +104,9 @@
   let trainers = [];
   let curricula = [];
   let activeCurriculumId = '';
+  let syncInterval = null;
+  let centerAutosaveTimer = null;
+  let isSyncing = false;
 
   function fmt(n){ return Number(n||0).toLocaleString(); }
   function esc(s){ return String(s ?? ''); }
@@ -184,8 +189,23 @@
   }
 
   async function refreshAll(){
+    if (isSyncing) return;
+    isSyncing = true;
     await Promise.all([loadDashboard(), loadTrainers(), loadCurricula()]);
     await loadRoster();
+    document.getElementById('evolveLastSync').textContent = `Synced ${new Date().toLocaleTimeString()}`;
+    isSyncing = false;
+  }
+
+  async function saveCenterRealtime(){
+    await api('/api/evolve/performance-center',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      brand_name:'Evolve',
+      facility_level:Number(document.getElementById('pcFacility').value||1),
+      monthly_cost:Number(document.getElementById('pcCost').value||0),
+      training_quality:Number(document.getElementById('pcTraining').value||50),
+      medical_quality:Number(document.getElementById('pcMedical').value||50),
+      scouting_quality:Number(document.getElementById('pcScouting').value||50)
+    })});
   }
 
   window.evolveCallUp = async (id)=>{ await api('/api/evolve/call-up',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prospect_id:id})}); await refreshAll(); };
@@ -212,15 +232,23 @@
     await refreshAll();
   });
   document.getElementById('saveCenterBtn').addEventListener('click', async ()=>{
-    await api('/api/evolve/performance-center',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      brand_name:'Evolve',
-      facility_level:Number(document.getElementById('pcFacility').value||1),
-      monthly_cost:Number(document.getElementById('pcCost').value||0),
-      training_quality:Number(document.getElementById('pcTraining').value||50),
-      medical_quality:Number(document.getElementById('pcMedical').value||50),
-      scouting_quality:Number(document.getElementById('pcScouting').value||50)
-    })});
+    await saveCenterRealtime();
     await refreshAll();
+  });
+
+  ['pcFacility','pcCost','pcTraining','pcMedical','pcScouting'].forEach((id)=>{
+    const el = document.getElementById(id);
+    el?.addEventListener('input', ()=>{
+      clearTimeout(centerAutosaveTimer);
+      centerAutosaveTimer = setTimeout(async ()=>{
+        try{
+          await saveCenterRealtime();
+          document.getElementById('evolveLastSync').textContent = `Auto-saved ${new Date().toLocaleTimeString()}`;
+        }catch(e){
+          console.error('Realtime save failed', e);
+        }
+      }, 700);
+    });
   });
 
   document.getElementById('addTrainerBtn').addEventListener('click', async ()=>{
@@ -256,5 +284,12 @@
     console.error(err);
     alert(`Evolve page failed to load: ${err.message}`);
   });
+
+  // Real-time sync polling
+  syncInterval = setInterval(()=>{ refreshAll().catch(console.error); }, 10000);
+  window.viewCleanup = function(){
+    if (syncInterval) clearInterval(syncInterval);
+    if (centerAutosaveTimer) clearTimeout(centerAutosaveTimer);
+  };
 })();
 </script>

@@ -27,9 +27,13 @@
       <h2 class="mb-1">Legacy Expansion Dashboard</h2>
       <p class="legacy-subtle mb-0">Frontend overview for Steps 126–212 systems (TV/media, venues, industry, ROC Evolve, marketing, staff, history).</p>
     </div>
-    <button class="btn btn-outline-light" id="legacyRefreshBtn">
-      <i class="bi bi-arrow-clockwise"></i> Refresh
-    </button>
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge text-bg-success">Live Sync ON</span>
+      <small class="legacy-subtle" id="legacyLastSync">Never synced</small>
+      <button class="btn btn-outline-light" id="legacyRefreshBtn">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+      </button>
+    </div>
   </div>
 
   <div class="row g-3 mb-4" id="legacySummaryCards"></div>
@@ -67,6 +71,8 @@
     staff_193_202: 'Staff (193-202)',
     history_203_212: 'History / Legacy (203-212)',
   };
+
+  let intervalId = null;
 
   function number(value) {
     return Number(value || 0).toLocaleString();
@@ -110,6 +116,7 @@
         });
       });
       tbody.innerHTML = rows.join('') || `<tr><td colspan="3" class="text-center text-muted py-4">No table data available.</td></tr>`;
+      document.getElementById('legacyLastSync').textContent = `Synced ${new Date().toLocaleTimeString()}`;
     } catch (err) {
       console.error(err);
       summary.innerHTML = `<div class="col-12"><div class="alert alert-danger">${err.message}</div></div>`;
@@ -119,5 +126,9 @@
 
   document.getElementById('legacyRefreshBtn')?.addEventListener('click', loadLegacyOverview);
   loadLegacyOverview();
+  intervalId = setInterval(loadLegacyOverview, 15000);
+  window.viewCleanup = function() {
+    if (intervalId) clearInterval(intervalId);
+  };
 })();
 </script>

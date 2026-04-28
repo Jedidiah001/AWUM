@@ -392,6 +392,10 @@ def calendar_view():
 def evolve_view():
     return render_template('evolve.html')
 
+@app.route('/world-feed')
+def world_feed_view():
+    return render_template('world_feed.html')
+
 @app.route('/legacy-expansion')
 def legacy_expansion_view():
     """Dashboard for feature sets added in Steps 126-212."""

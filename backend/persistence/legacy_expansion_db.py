@@ -486,11 +486,26 @@ def create_legacy_expansion_tables(database) -> None:
             updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
 
+        CREATE TABLE IF NOT EXISTS world_feed (
+            feed_id TEXT PRIMARY KEY,
+            year INTEGER NOT NULL,
+            week INTEGER NOT NULL,
+            source_type TEXT NOT NULL,
+            source_event_id TEXT,
+            headline TEXT NOT NULL,
+            details_json TEXT NOT NULL DEFAULT '{}',
+            impact_json TEXT NOT NULL DEFAULT '{}',
+            significance INTEGER DEFAULT 1,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
         CREATE INDEX IF NOT EXISTS idx_tv_ratings_year_week ON tv_ratings_weekly(year, week);
         CREATE INDEX IF NOT EXISTS idx_market_share_year_week ON market_share_snapshots(year, week);
         CREATE INDEX IF NOT EXISTS idx_evolve_events_year_week ON evolve_events(year, week);
         CREATE INDEX IF NOT EXISTS idx_history_matches_year_week ON history_matches(year, week);
         CREATE INDEX IF NOT EXISTS idx_history_moments_significance ON historical_moments(significance_level);
+        CREATE INDEX IF NOT EXISTS idx_world_feed_created_at ON world_feed(created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_world_feed_year_week ON world_feed(year, week);
         """
     )
 
