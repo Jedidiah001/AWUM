@@ -159,6 +159,7 @@ def create_show_production_tables(database):
     # Forward-compatible columns for dark matches (routes send richer payloads).
     # SQLite: no IF NOT EXISTS for ADD COLUMN, so try/except.
     for ddl in [
+        "ALTER TABLE dark_matches ADD COLUMN notes TEXT",
         "ALTER TABLE dark_matches ADD COLUMN brand TEXT",
         "ALTER TABLE dark_matches ADD COLUMN finish_type TEXT",
         "ALTER TABLE dark_matches ADD COLUMN star_rating REAL DEFAULT 0.0",
