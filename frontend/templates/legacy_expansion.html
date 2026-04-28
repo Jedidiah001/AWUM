@@ -1,0 +1,100 @@
+<div class="container-fluid p-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <h2 class="mb-1">Legacy Expansion Dashboard</h2>
+      <p class="text-muted mb-0">Frontend overview for Steps 126–212 systems (TV/media, venues, industry, ROC Evolve, marketing, staff, history).</p>
+    </div>
+    <button class="btn btn-outline-light" id="legacyRefreshBtn">
+      <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+  </div>
+
+  <div class="row g-3 mb-4" id="legacySummaryCards"></div>
+
+  <div class="card bg-dark border-secondary">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong>Table Status</strong>
+      <small class="text-muted">Row counts by feature group</small>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-dark table-striped table-hover mb-0" id="legacyTableStatus">
+          <thead>
+            <tr>
+              <th>Feature Group</th>
+              <th>Table</th>
+              <th class="text-end">Rows</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const labelMap = {
+    tv_media_126_137: 'TV / Media (126-137)',
+    venues_138_148: 'Venues (138-148)',
+    industry_161_170: 'Industry (161-170)',
+    development_171_182: 'ROC Evolve (171-182)',
+    marketing_183_192: 'Marketing (183-192)',
+    staff_193_202: 'Staff (193-202)',
+    history_203_212: 'History / Legacy (203-212)',
+  };
+
+  function number(value) {
+    return Number(value || 0).toLocaleString();
+  }
+
+  async function loadLegacyOverview() {
+    const summary = document.getElementById('legacySummaryCards');
+    const tbody = document.querySelector('#legacyTableStatus tbody');
+
+    summary.innerHTML = `<div class="col-12 text-center py-3"><div class="spinner-border"></div></div>`;
+    tbody.innerHTML = '';
+
+    try {
+      const res = await fetch('/api/legacy/overview');
+      if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
+      const data = await res.json();
+      const groups = data.groups || {};
+
+      summary.innerHTML = Object.entries(groups).map(([key, group]) => `
+        <div class="col-12 col-md-6 col-xl-4">
+          <div class="card bg-dark border-secondary h-100">
+            <div class="card-body">
+              <div class="text-muted small mb-1">${labelMap[key] || key}</div>
+              <div class="h3 mb-1">${number(group.total_rows)}</div>
+              <div class="small text-muted">${number((group.tables || []).length)} table(s)</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      const rows = [];
+      Object.entries(groups).forEach(([key, group]) => {
+        (group.tables || []).forEach((table, idx) => {
+          rows.push(`
+            <tr>
+              <td>${idx === 0 ? (labelMap[key] || key) : ''}</td>
+              <td><code>${table.name}</code></td>
+              <td class="text-end">${number(table.rows)}</td>
+            </tr>
+          `);
+        });
+      });
+      tbody.innerHTML = rows.join('') || `<tr><td colspan="3" class="text-center text-muted py-4">No table data available.</td></tr>`;
+    } catch (err) {
+      console.error(err);
+      summary.innerHTML = `<div class="col-12"><div class="alert alert-danger">${err.message}</div></div>`;
+      tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">Failed to load legacy overview.</td></tr>`;
+    }
+  }
+
+  document.getElementById('legacyRefreshBtn')?.addEventListener('click', loadLegacyOverview);
+  loadLegacyOverview();
+})();
+</script>
