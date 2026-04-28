@@ -497,6 +497,13 @@ class Database:
         except Exception as _vpe:
             print(f"⚠️ Could not create venue tables: {_vpe}")
 
+        # STEPS 126-212: TV/media + marketing + staff + industry + ROC Evolve + legacy
+        try:
+            from persistence.legacy_expansion_db import create_legacy_expansion_tables
+            create_legacy_expansion_tables(self)
+        except Exception as _lee:
+            print(f"⚠️ Could not create legacy expansion tables: {_lee}")
+
         self.conn.commit()
         print("✅ SQLite database initialized")
     
