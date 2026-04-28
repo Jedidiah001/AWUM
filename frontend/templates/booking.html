@@ -783,13 +783,26 @@
         var config = getSegmentTypeConfig(normalized.segment_type);
 
         normalized.segment_id = normalized.segment_id || createDraftId('segment');
+        normalized.participant_name_map = normalized.participant_name_map || {};
         var rawParticipants = normalized.participants || normalized.participant_ids || normalized.participants_ids || normalized.participantIds || [];
         normalized.participants = (rawParticipants || []).map(function(participant) {
             if (typeof participant === 'string') return participant;
-            if (participant && participant.wrestler_id) return participant.wrestler_id;
-            if (participant && participant.wrestlerId) return participant.wrestlerId;
-            if (participant && participant.participant_id) return participant.participant_id;
-            if (participant && participant.id) return participant.id;
+            if (participant && participant.wrestler_id) {
+                if (participant.wrestler_name) normalized.participant_name_map[participant.wrestler_id] = participant.wrestler_name;
+                return participant.wrestler_id;
+            }
+            if (participant && participant.wrestlerId) {
+                if (participant.wrestler_name) normalized.participant_name_map[participant.wrestlerId] = participant.wrestler_name;
+                return participant.wrestlerId;
+            }
+            if (participant && participant.participant_id) {
+                if (participant.name) normalized.participant_name_map[participant.participant_id] = participant.name;
+                return participant.participant_id;
+            }
+            if (participant && participant.id) {
+                if (participant.name) normalized.participant_name_map[participant.id] = participant.name;
+                return participant.id;
+            }
             return participant;
         }).filter(Boolean);
         normalized.display_name = normalized.display_name || (config && config.display_name) || null;
@@ -1715,6 +1728,9 @@ function confirmAddMatch() {
             importance: document.getElementById('newMatchImportance').value,
             position: (currentShowDraft.matches ? currentShowDraft.matches.length : 0) + 1
         };
+        if (isTeams) {
+            newMatch.team_units = collectTeamUnitMetadata(participants);
+        }
         
         // Title match
         if (document.getElementById('isTitleMatch').checked) {
@@ -1814,6 +1830,45 @@ function validateTagTeam() {
     }
     
     return teams.length > 0 ? teams : null;
+}
+
+function collectTeamUnitMetadata(participants) {
+    if (!Array.isArray(participants)) return [];
+    var teamMeta = [];
+
+    participants.forEach(function(teamIds, idx) {
+        if (!Array.isArray(teamIds)) return;
+        var teamLetter = String.fromCharCode(65 + idx);
+        var unitSel = document.getElementById('team' + teamLetter + '_unit');
+        var unit = unitSel ? (unitSel.value || '') : '';
+        var meta = {
+            team_letter: teamLetter,
+            unit_type: 'custom',
+            unit_id: null,
+            display_name: 'Custom Team',
+            member_ids: teamIds.slice()
+        };
+
+        if (unit.indexOf('tag:') === 0) {
+            var teamId = unit.split(':')[1];
+            var team = allTagTeams[teamId];
+            meta.unit_type = 'tag_team';
+            meta.unit_id = teamId;
+            meta.display_name = (team && team.team_name) ? team.team_name : 'Tag Team';
+        } else if (unit.indexOf('faction:') === 0) {
+            var factionId = unit.split(':')[1];
+            var faction = allFactions[factionId];
+            meta.unit_type = 'faction';
+            meta.unit_id = factionId;
+            meta.display_name = (faction && (faction.faction_name || faction.name))
+                ? (faction.faction_name || faction.name)
+                : 'Faction Team';
+        }
+
+        teamMeta.push(meta);
+    });
+
+    return teamMeta;
 }
 
 function validateSingles() {
@@ -1978,7 +2033,7 @@ function renderMatchCard(match, matchIndex, itemNumber) {
     if (match.is_intergender) {
         html += renderIntergenderParticipants(match.participants);
     } else {
-        html += renderRegularParticipants(match.participants, match.gender_division);
+        html += renderRegularParticipants(match.participants, match.gender_division, match);
     }
     
     // Booking info
@@ -2053,7 +2108,7 @@ function renderIntergenderParticipants(participants) {
 // RENDER REGULAR PARTICIPANTS (GENDER-SPECIFIC STYLING)
 // ========================================================================
 
-function renderRegularParticipants(participants, genderDivision) {
+function renderRegularParticipants(participants, genderDivision, matchObj) {
     if (!Array.isArray(participants) || participants.length === 0) {
         return '<p class="text-muted">Invalid participant data</p>';
     }
@@ -2078,6 +2133,9 @@ function renderRegularParticipants(participants, genderDivision) {
             }
 
             var teamName = null;
+            if (matchObj && Array.isArray(matchObj.team_units) && matchObj.team_units[index] && matchObj.team_units[index].display_name) {
+                teamName = matchObj.team_units[index].display_name;
+            }
             (tagTeamsList || []).some(function(t) {
                 var mids = (t.member_ids || []).slice(0, ids.length);
                 if (sameSet(ids, mids)) {
@@ -2510,6 +2568,12 @@ function renderSegmentCard(segment, segmentIndex, itemNumber) {
             html += '<span class="badge ' + badgeClass + '">' +
                     genderIcon + ' ' + wrestler.ring_name +
                     '</span>';
+        } else if (segment.participant_name_map && segment.participant_name_map[wId]) {
+            html += '<span class="badge bg-secondary">' +
+                    segment.participant_name_map[wId] +
+                    '</span>';
+        } else {
+            html += '<span class="badge bg-secondary">' + String(wId) + '</span>';
         }
     });
     

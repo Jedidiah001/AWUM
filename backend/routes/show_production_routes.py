@@ -466,9 +466,10 @@ def api_plan_house_show_tour():
             try:
                 from models.calendar import ScheduledShow
                 cal = ScheduledShow(
-                    show_id=hs_id, year=hs_year, week=hs_week, day="Saturday",
+                    show_id=hs_id, year=hs_year, week=hs_week, day_of_week="Saturday",
                     brand=brand, name=f"{brand} House Show — {city}",
                     show_type="house_show", is_ppv=False,
+                    tier="house",
                 )
                 if hs_id not in {s.show_id for s in universe.calendar.generated_shows}:
                     universe.calendar.generated_shows.append(cal)
@@ -1153,8 +1154,8 @@ def api_generate_dark_matches():
     universe = _universe()
     db = _db()
     try:
-        from simulation.show_production import dark_match_manager
-        from persistence.show_production_db import save_dark_match
+        dark_match_manager = _show_production('dark_match_manager')
+        save_dark_match = _load_symbol('persistence.show_production_db', 'save_dark_match')
 
         data      = request.get_json() or {}
         brand     = data.get("brand",     "ROC Alpha")
@@ -1243,7 +1244,11 @@ def api_generate_dark_matches():
                         "dark_matches": result, "saved": save_flag and bool(result)})
     except Exception as e:
         traceback.print_exc()
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "hint": "If this happened after code changes, restart Flask or trigger module reload."
+        }), 500
 
 
 @show_production_bp.route('/api/show-production/dark-matches/list')
