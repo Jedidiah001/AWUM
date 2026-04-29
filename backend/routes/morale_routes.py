@@ -218,7 +218,7 @@ def _morale_record_from_dict(data, wrestler):
 
 
 def _load_morale_record(db, wrestler):
-    return _morale_record_from_dict(db.get_morale_record(wrestler.id), wrestler)
+    return _morale_record_from_dict(db.load_morale_record(wrestler.id), wrestler)
 
 
 def _persist_morale_record(db, universe, wrestler, record):

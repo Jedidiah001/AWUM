@@ -566,6 +566,7 @@ const SHOW_SCHEDULE = {
 let _roster      = [];
 let _rivals      = [...RIVAL_PROMOTIONS_STATIC]; // start with static, may update from API
 let _freeAgents  = [];
+let _debutShows  = [];
 let _currentCaseFaId   = null;
 let _resolveHoldoutWid = null;
 let _cachedProbationary = null; // stores generated probationary contract terms
@@ -637,6 +638,25 @@ function buildGroupedRosterMultiSelect(sel) {
 
 function buildShowSelect(sel) {
     sel.innerHTML = '<option value="">— Select show —</option>';
+    if (_debutShows.length) {
+        const weeklyGrp = document.createElement("optgroup");
+        weeklyGrp.label = "Weekly TV";
+        const ppvGrp = document.createElement("optgroup");
+        ppvGrp.label = "PPV";
+        _debutShows.forEach(s => {
+            const opt = document.createElement("option");
+            opt.value = s.show_id;
+            opt.dataset.showName = s.show_name;
+            opt.dataset.week = s.week;
+            opt.dataset.year = s.year;
+            opt.textContent = s.label;
+            if (s.show_type === "weekly_tv") weeklyGrp.appendChild(opt);
+            else ppvGrp.appendChild(opt);
+        });
+        if (weeklyGrp.children.length) sel.appendChild(weeklyGrp);
+        if (ppvGrp.children.length) sel.appendChild(ppvGrp);
+        return;
+    }
     Object.entries(SHOW_SCHEDULE).forEach(([grpName, shows]) => {
         const grp = document.createElement("optgroup");
         grp.label = grpName;
@@ -690,10 +710,11 @@ function populateAllSelects() {
 // ═══════════════════════════════════════════════════════════════════════════
 async function loadGlobalData() {
     try {
-        const [rResp, rivResp, faResp] = await Promise.all([
+        const [rResp, rivResp, faResp, showsResp] = await Promise.all([
             apiGet("/api/roster"),
             apiGet("/api/rivals"),
             apiGet("/api/free-agents"),
+            apiGet("/api/secret-signings/debut-shows"),
         ]);
         _roster     = rResp?.wrestlers || rResp?.roster || [];
         // Merge API rivals with static (API wins, keeping known_wrestlers from static as fallback)
@@ -708,6 +729,7 @@ async function loadGlobalData() {
             });
         }
         _freeAgents = faResp?.free_agents || [];
+        _debutShows = showsResp?.shows || [];
         populateAllSelects();
     } catch(e) {
         console.error("Failed to load global data:", e);
@@ -1153,14 +1175,18 @@ async function submitCreateSigning() {
     if (!showSel?.value) { flash("Please select a planned debut show","warning"); return; }
     const faName  = faSel.options[faSel.selectedIndex]?.dataset?.name || faSel.options[faSel.selectedIndex]?.textContent?.split(" (")[0]||"";
     const oppName = oppSel?.value?(oppSel.options[oppSel.selectedIndex]?.dataset?.name||oppSel.options[oppSel.selectedIndex]?.textContent?.split(" (")[0]||""):"";
+    const selectedShow = showSel.options[showSel.selectedIndex];
+    const showName = selectedShow?.dataset?.showName || showSel.value;
+    const showWeek = parseInt(selectedShow?.dataset?.week || document.getElementById("ssWeek").value) || 1;
+    const showYear = parseInt(selectedShow?.dataset?.year || 1) || 1;
     const r = await apiPost("/api/secret-signings/create", {
         fa_id:faSel.value, wrestler_name:faName,
         secret_level:document.getElementById("ssLevel").value,
         salary_per_show:parseInt(document.getElementById("ssSalary").value)||0,
         contract_weeks:parseInt(document.getElementById("ssWeeks").value)||52,
         signing_bonus:parseInt(document.getElementById("ssBonus").value)||0,
-        planned_show:showSel.value, planned_week:parseInt(document.getElementById("ssWeek").value)||1,
-        planned_year:1, planned_opponent_name:oppName,
+        planned_show_id:showSel.value, planned_show:showName, planned_week:showWeek,
+        planned_year:showYear, planned_opponent_name:oppName,
     });
     if (r.success) { flash(r.message||"Secret signing created!"); bootstrap.Modal.getInstance(document.getElementById("modalCreateSigning"))?.hide(); loadSecretSigningsTab(); }
     else flash("Error: "+r.error,"danger");

@@ -641,10 +641,10 @@
 
             <div class="nav-sep"></div>
 
-            <a href="/free-agents">
+            <a href="#" onclick="loadView('free-agents');return false;">
                 <i class="bi bi-person-badge"></i> Free Agents
             </a>
-            <a href="/agents">
+            <a href="#" onclick="loadView('agents');return false;">
                 <i class="bi bi-briefcase"></i> Agents
             </a>
             <a href="#" onclick="loadView('contracts');return false;">
@@ -653,7 +653,7 @@
             <a href="#" onclick="loadView('draft');return false;">
                 <i class="bi bi-arrow-left-right"></i> Draft
             </a>
-            <a href="/controversy" class="nav-controversy">
+            <a href="#" onclick="loadView('controversy');return false;" class="nav-controversy">
                 <i class="bi bi-shield-exclamation"></i> Controversy
             </a>
 
@@ -668,8 +668,8 @@
             <a href="#" onclick="loadView('finance');return false;">
                 <i class="bi bi-cash-stack"></i> Finance
             </a>
-            <a href="/stats"><i class="bi bi-graph-up"></i> Stats</a>
-            <a href="/awards"><i class="bi bi-star"></i> Awards</a>
+            <a href="#" onclick="loadView('stats');return false;"><i class="bi bi-graph-up"></i> Stats</a>
+            <a href="#" onclick="loadView('awards');return false;"><i class="bi bi-star"></i> Awards</a>
 
             <a href="/morale" onclick="loadView('morale');return false;">
                 <i class="bi bi-heart-pulse"></i> Morale
@@ -1151,14 +1151,15 @@ function executeScripts(container) {
                               trimmedScript.startsWith('(async function()') ||
                               trimmedScript.startsWith('!async function()');
             const apiInjection = `
-                var fetchAPI = window.fetchAPI;
-                var getAPI   = window.getAPI;
-                var postAPI  = window.postAPI;
-                var putAPI   = window.putAPI;
-                var deleteAPI = window.deleteAPI;
+                globalThis.fetchAPI = globalThis.fetchAPI || window.fetchAPI;
+                globalThis.getAPI = globalThis.getAPI || window.getAPI;
+                globalThis.postAPI = globalThis.postAPI || window.postAPI;
+                globalThis.putAPI = globalThis.putAPI || window.putAPI;
+                globalThis.deleteAPI = globalThis.deleteAPI || window.deleteAPI;
             `;
             if (!isWrapped) {
-                newScript.textContent = `(async function() { ${apiInjection} try { ${scriptContent} } catch(e) { console.error('Error in view script ${index}:',e); } })();`;
+                // Keep script in global scope so inline handlers (onclick="...") can resolve functions.
+                newScript.textContent = `${apiInjection}\n${scriptContent}`;
             } else {
                 const wc = trimmedScript;
                 let ip = -1;
@@ -1167,7 +1168,7 @@ function executeScripts(container) {
                 if (ip > 0) {
                     newScript.textContent = wc.slice(0, ip) + '\n' + apiInjection + '\n' + wc.slice(ip);
                 } else {
-                    newScript.textContent = `(async function() { ${apiInjection} try { ${scriptContent} } catch(e) { console.error('Error in view script ${index}:',e); } })();`;
+                    newScript.textContent = `${apiInjection}\n${scriptContent}`;
                 }
             }
             oldScript.parentNode.replaceChild(newScript, oldScript);
