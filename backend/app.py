@@ -78,6 +78,7 @@ from routes.rivals_routes import rivals_bp
 
 # STEP 126: Rival Promotion Manager & Bidding Wars
 from economy.rival_promotion_manager import initialize_rival_promotion_manager
+from economy.competing_promotion_ai import CompetingPromotionAI
 from economy.bidding_war import BiddingWarEngine
 from routes.bidding_war_routes import bidding_war_bp
 from routes.negotiation_routes import negotiation_bp
@@ -106,6 +107,9 @@ app.config['AGENT_MANAGER'] = agent_manager
 app.config['RIVAL_PROMOTION_MANAGER'] = rival_mgr
 app.config['RIVAL_MANAGER'] = rival_mgr  # Alias for compatibility
 app.config['BIDDING_WAR_ENGINE'] = BiddingWarEngine(database, rival_mgr)
+competing_ai = CompetingPromotionAI(database, rival_mgr)
+competing_ai.initialize_metadata()
+app.config['COMPETING_PROMOTION_AI'] = competing_ai
 app.config['DATABASE'] = database  # Make database available to blueprints
 
 
@@ -395,6 +399,10 @@ def evolve_view():
 @app.route('/world-feed')
 def world_feed_view():
     return render_template('world_feed.html')
+
+@app.route('/rivals-intelligence')
+def rivals_intelligence_view():
+    return render_template('rivals_intelligence.html')
 
 @app.route('/legacy-expansion')
 def legacy_expansion_view():
