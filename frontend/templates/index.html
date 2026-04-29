@@ -1151,11 +1151,11 @@ function executeScripts(container) {
                               trimmedScript.startsWith('(async function()') ||
                               trimmedScript.startsWith('!async function()');
             const apiInjection = `
-                var fetchAPI = window.fetchAPI;
-                var getAPI   = window.getAPI;
-                var postAPI  = window.postAPI;
-                var putAPI   = window.putAPI;
-                var deleteAPI = window.deleteAPI;
+                globalThis.fetchAPI = globalThis.fetchAPI || window.fetchAPI;
+                globalThis.getAPI = globalThis.getAPI || window.getAPI;
+                globalThis.postAPI = globalThis.postAPI || window.postAPI;
+                globalThis.putAPI = globalThis.putAPI || window.putAPI;
+                globalThis.deleteAPI = globalThis.deleteAPI || window.deleteAPI;
             `;
             if (!isWrapped) {
                 // Keep script in global scope so inline handlers (onclick="...") can resolve functions.
