@@ -1158,7 +1158,8 @@ function executeScripts(container) {
                 var deleteAPI = window.deleteAPI;
             `;
             if (!isWrapped) {
-                newScript.textContent = `(async function() { ${apiInjection} try { ${scriptContent} } catch(e) { console.error('Error in view script ${index}:',e); } })();`;
+                // Keep script in global scope so inline handlers (onclick="...") can resolve functions.
+                newScript.textContent = `${apiInjection}\n${scriptContent}`;
             } else {
                 const wc = trimmedScript;
                 let ip = -1;
@@ -1167,7 +1168,7 @@ function executeScripts(container) {
                 if (ip > 0) {
                     newScript.textContent = wc.slice(0, ip) + '\n' + apiInjection + '\n' + wc.slice(ip);
                 } else {
-                    newScript.textContent = `(async function() { ${apiInjection} try { ${scriptContent} } catch(e) { console.error('Error in view script ${index}:',e); } })();`;
+                    newScript.textContent = `${apiInjection}\n${scriptContent}`;
                 }
             }
             oldScript.parentNode.replaceChild(newScript, oldScript);
