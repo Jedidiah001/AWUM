@@ -388,10 +388,102 @@ def show_production_view():
 def calendar_view():
     return render_template('calendar.html')
 
+@app.route('/evolve')
+def evolve_view():
+    return render_template('evolve.html')
+
+@app.route('/world-feed')
+def world_feed_view():
+    return render_template('world_feed.html')
+
+@app.route('/history-hub')
+def history_hub_view():
+    return render_template('history_hub.html')
+
+@app.route('/legacy-expansion')
+def legacy_expansion_view():
+    """Dashboard for feature sets added in Steps 126-212."""
+    return render_template('legacy_expansion.html')
+
 @app.route('/contract-card/<share_id>')
 def contract_card_view(share_id):
     """View a shared contract card"""
     return render_template('contract_card.html', share_id=share_id)
+
+
+@app.route('/api/legacy/overview')
+def legacy_overview_api():
+    """Aggregate overview for the legacy expansion frontend page."""
+    cursor = database.conn.cursor()
+
+    def _table_rows(table_name: str) -> int:
+        try:
+            cursor.execute(f"SELECT COUNT(*) AS c FROM {table_name}")
+            row = cursor.fetchone()
+            return int(row["c"] if row and "c" in row.keys() else row[0])
+        except Exception:
+            return 0
+
+    groups = {
+        "tv_media_126_137": [
+            "tv_ratings_weekly",
+            "tv_ratings_quarter_hours",
+            "network_relationship_log",
+            "media_ecosystem_log",
+        ],
+        "venues_138_148": [
+            "venue_strategy_profiles",
+            "regional_popularity",
+            "tour_routing_plans",
+            "venue_relationships",
+            "venue_external_factors",
+            "venue_sellout_streaks",
+        ],
+        "industry_161_170": [
+            "industry_promotions",
+            "industry_talent_movement",
+            "industry_partnerships",
+            "invasion_storylines",
+            "industry_sentiment_log",
+            "market_share_snapshots",
+        ],
+        "development_171_182": [
+            "evolve_performance_center",
+            "evolve_trainers",
+            "evolve_curricula",
+            "evolve_roster",
+            "evolve_events",
+        ],
+        "marketing_183_192": [
+            "marketing_campaigns",
+            "event_promotion_log",
+        ],
+        "staff_193_202": [
+            "staff_roles",
+            "talent_relations_log",
+        ],
+        "history_203_212": [
+            "history_matches",
+            "history_storylines",
+            "history_championships",
+            "hall_of_fame",
+            "rivalry_history",
+            "history_anniversaries",
+            "history_records",
+            "historical_moments",
+            "named_eras",
+            "wrestler_legacy_stats",
+        ],
+    }
+
+    payload = {}
+    for group_name, tables in groups.items():
+        payload[group_name] = {
+            "tables": [{ "name": t, "rows": _table_rows(t) } for t in tables],
+            "total_rows": sum(_table_rows(t) for t in tables),
+        }
+
+    return jsonify({"ok": True, "groups": payload})
 
     
 # ============================================================================

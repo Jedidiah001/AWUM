@@ -128,6 +128,30 @@ def booking_view():
 def calendar_view():
     return render_template('calendar.html')
 
+@app.route('/show-production')
+def show_production_view():
+    return render_template('show_production.html')
+
+@app.route('/locker-room')
+def locker_room_view():
+    return render_template('locker_room.html')
+
+@app.route('/evolve')
+def evolve_view():
+    return render_template('evolve.html')
+
+@app.route('/world-feed')
+def world_feed_view():
+    return render_template('world_feed.html')
+
+@app.route('/history-hub')
+def history_hub_view():
+    return render_template('history_hub.html')
+
+@app.route('/legacy-expansion')
+def legacy_expansion_view():
+    return render_template('legacy_expansion.html')
+
 @app.route('/recap')
 def recap_view():
     return render_template('recap.html')

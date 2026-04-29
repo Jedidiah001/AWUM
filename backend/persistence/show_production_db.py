@@ -159,6 +159,7 @@ def create_show_production_tables(database):
     # Forward-compatible columns for dark matches (routes send richer payloads).
     # SQLite: no IF NOT EXISTS for ADD COLUMN, so try/except.
     for ddl in [
+        "ALTER TABLE dark_matches ADD COLUMN notes TEXT",
         "ALTER TABLE dark_matches ADD COLUMN brand TEXT",
         "ALTER TABLE dark_matches ADD COLUMN finish_type TEXT",
         "ALTER TABLE dark_matches ADD COLUMN star_rating REAL DEFAULT 0.0",
@@ -231,6 +232,55 @@ def save_dark_match(database, dark_match: Dict[str, Any]) -> None:
     Unknown keys are ignored so callers can send richer payloads safely.
     """
     cursor = database.conn.cursor()
+
+    # Self-heal schema drift for older saves that may not have run startup
+    # table creation/migrations yet.
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS dark_matches (
+            dark_match_id TEXT PRIMARY KEY,
+            show_id TEXT NOT NULL,
+            show_name TEXT NOT NULL,
+            year INTEGER NOT NULL,
+            week INTEGER NOT NULL,
+            match_type TEXT NOT NULL,
+            side_a_ids TEXT NOT NULL,
+            side_a_names TEXT NOT NULL,
+            side_b_ids TEXT NOT NULL,
+            side_b_names TEXT NOT NULL,
+            winner TEXT NOT NULL,
+            duration_minutes INTEGER DEFAULT 10,
+            purpose TEXT NOT NULL,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            brand TEXT,
+            finish_type TEXT,
+            star_rating REAL DEFAULT 0.0,
+            is_tryout INTEGER DEFAULT 0,
+            is_developmental INTEGER DEFAULT 0,
+            is_pre_show INTEGER DEFAULT 1,
+            is_post_show INTEGER DEFAULT 0,
+            match_summary TEXT,
+            highlights TEXT DEFAULT '[]',
+            FOREIGN KEY (show_id) REFERENCES show_history(show_id)
+        )
+    ''')
+
+    cursor.execute("PRAGMA table_info(dark_matches)")
+    existing_columns = {row[1] for row in cursor.fetchall()}
+    for ddl, col_name in [
+        ("ALTER TABLE dark_matches ADD COLUMN notes TEXT", "notes"),
+        ("ALTER TABLE dark_matches ADD COLUMN brand TEXT", "brand"),
+        ("ALTER TABLE dark_matches ADD COLUMN finish_type TEXT", "finish_type"),
+        ("ALTER TABLE dark_matches ADD COLUMN star_rating REAL DEFAULT 0.0", "star_rating"),
+        ("ALTER TABLE dark_matches ADD COLUMN is_tryout INTEGER DEFAULT 0", "is_tryout"),
+        ("ALTER TABLE dark_matches ADD COLUMN is_developmental INTEGER DEFAULT 0", "is_developmental"),
+        ("ALTER TABLE dark_matches ADD COLUMN is_pre_show INTEGER DEFAULT 1", "is_pre_show"),
+        ("ALTER TABLE dark_matches ADD COLUMN is_post_show INTEGER DEFAULT 0", "is_post_show"),
+        ("ALTER TABLE dark_matches ADD COLUMN match_summary TEXT", "match_summary"),
+        ("ALTER TABLE dark_matches ADD COLUMN highlights TEXT DEFAULT '[]'", "highlights"),
+    ]:
+        if col_name not in existing_columns:
+            cursor.execute(ddl)
 
     def _json(value, default):
         if value is None:
