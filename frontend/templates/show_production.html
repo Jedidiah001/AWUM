@@ -591,6 +591,40 @@
 <!-- ============================================================ -->
 <!-- JavaScript -->
 <!-- ============================================================ -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card border-secondary">
+            <div class="card-header bg-secondary text-white"><h6 class="mb-0">Advanced Creative Systems (Persistent)</h6></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <input id="customPpvName" class="form-control mb-2" placeholder="PPV Name">
+                        <input id="customPpvLocation" class="form-control mb-2" placeholder="Location">
+                        <input id="customPpvYear" type="number" class="form-control mb-2" placeholder="Year">
+                        <input id="customPpvWeek" type="number" class="form-control mb-2" placeholder="Week 1-52">
+                        <select id="customPpvTier" class="form-select mb-2"><option value="minor">Minor PPV</option><option value="major">Major PPV</option></select>
+                        <button class="btn btn-secondary w-100" onclick="createCustomPPV()">Create Custom PPV</button>
+                    </div>
+                    <div class="col-md-4">
+                        <input id="cinematicTitle" class="form-control mb-2" placeholder="Cinematic Match Title">
+                        <input id="cinematicLocation" class="form-control mb-2" placeholder="Filming Location">
+                        <input id="cinematicScores" class="form-control mb-2" placeholder="Script,Production,Acting,Originality">
+                        <button class="btn btn-dark w-100" onclick="bookAdvancedFeature('cinematic_match')">Save Cinematic Match</button>
+                    </div>
+                    <div class="col-md-4">
+                        <input id="swerveTitle" class="form-control mb-2" placeholder="Swerve Title">
+                        <input id="swerveScores" class="form-control mb-2" placeholder="Surprise,Logic,Follow-through">
+                        <button class="btn btn-danger w-100 mb-2" onclick="bookAdvancedFeature('twist_swerve')">Save Swerve</button>
+                        <input id="arcName" class="form-control mb-2" placeholder="Long-Term Arc Name">
+                        <input id="arcEnd" class="form-control mb-2" placeholder="EndYear,EndWeek">
+                        <button class="btn btn-primary w-100" onclick="bookAdvancedFeature('long_term_arc')">Save Long-Term Arc</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // ── Helpers ──────────────────────────────────────────────────────────
 function badge(text, color='secondary') {
@@ -1121,6 +1155,38 @@ async function loadHouseShowCities() {
     }
 }
 
+async function createCustomPPV() {
+    const payload = {
+        name: document.getElementById('customPpvName').value,
+        location: document.getElementById('customPpvLocation').value,
+        year: parseInt(document.getElementById('customPpvYear').value || '1'),
+        week: parseInt(document.getElementById('customPpvWeek').value || '1'),
+        tier: document.getElementById('customPpvTier').value
+    };
+    const r = await fetch('/api/show-production/custom-ppv/create', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error || 'Failed to create custom PPV');
+    showToast('Custom PPV created and added to calendar.', 'success');
+}
+
+async function bookAdvancedFeature(feature_type) {
+    let payload = { feature_type };
+    if (feature_type === 'cinematic_match') {
+        const s = (document.getElementById('cinematicScores').value || '50,50,50,50').split(',').map(v => parseInt(v.trim() || '50'));
+        payload = { ...payload, title: document.getElementById('cinematicTitle').value, location: document.getElementById('cinematicLocation').value, script_quality: s[0], production_value: s[1], acting_quality: s[2], originality: s[3] };
+    } else if (feature_type === 'twist_swerve') {
+        const s = (document.getElementById('swerveScores').value || '50,50,50').split(',').map(v => parseInt(v.trim() || '50'));
+        payload = { ...payload, title: document.getElementById('swerveTitle').value, surprise_rating: s[0], logic_rating: s[1], follow_through: s[2] };
+    } else if (feature_type === 'long_term_arc') {
+        const [endYear, endWeek] = (document.getElementById('arcEnd').value || '1,12').split(',').map(v => parseInt(v.trim() || '1'));
+        payload = { ...payload, name: document.getElementById('arcName').value, planned_end_year: endYear, planned_end_week: endWeek, beats: ['setup', 'first escalation', 'complication', 'second escalation', 'near-miss', 'resolution'] };
+    }
+    const r = await fetch('/api/show-production/advanced/book', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error || 'Failed to save advanced feature');
+    showToast(`${feature_type} saved.`, 'success');
+}
+
 async function planHouseShowTour() {
     const brand          = document.getElementById('houseShowBrand').value;
     const duration_weeks = parseInt(document.getElementById('houseShowDuration').value);
@@ -1369,6 +1435,8 @@ window.planReturn          = planReturn;
 window.planHouseShowTour   = planHouseShowTour;
 window.loadHouseShowCities = loadHouseShowCities;
 window.filterSegmentTypes  = filterSegmentTypes;
+window.createCustomPPV     = createCustomPPV;
+window.bookAdvancedFeature = bookAdvancedFeature;
 
 // Run on load
 loadProductionDashboard();
