@@ -400,6 +400,10 @@ def evolve_view():
 def world_feed_view():
     return render_template('world_feed.html')
 
+@app.route('/rivals-intelligence')
+def rivals_intelligence_view():
+    return render_template('rivals_intelligence.html')
+
 @app.route('/legacy-expansion')
 def legacy_expansion_view():
     """Dashboard for feature sets added in Steps 126-212."""
