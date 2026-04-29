@@ -627,8 +627,10 @@
         var attributes = wrestler.attributes || {};
         var stats = wrestler.stats || {};
         var normalizedGender = (wrestler.gender || '').toLowerCase();
+        var normalizedId = wrestler.id || wrestler.wrestler_id || wrestler.wrestlerId || wrestler.worker_id || null;
 
         return Object.assign({}, wrestler, {
+            id: normalizedId,
             name: wrestler.name || wrestler.ring_name || 'Unknown Wrestler',
             ring_name: wrestler.ring_name || wrestler.name || 'Unknown Wrestler',
             gender: normalizedGender || wrestler.gender || '',
@@ -1464,7 +1466,8 @@ function renderBattleRoyalSelection(container, matchType) {
     var genderLabel = currentGenderDivision === 'male' ? 'Men\'s' : 'Women\'s';
     var genderClass = currentGenderDivision === 'male' ? 'wrestler-card-male' : 'wrestler-card-female';
     
-    var minCount = matchType === 'rumble' ? 30 : 8;
+    var isRumbleRoyaleShow = currentShowDraft && (currentShowDraft.show_name || '').toLowerCase() === 'rumble royale';
+    var minCount = matchType === 'rumble' ? (isRumbleRoyaleShow ? 30 : 8) : 8;
     var maxCount = matchType === 'rumble' ? 30 : 20;
     
     var html = '<div class="division-banner division-banner-' + currentGenderDivision + ' mb-3">' +
@@ -1485,7 +1488,9 @@ function renderBattleRoyalSelection(container, matchType) {
     });
     
     html += '</select>' +
-            '<small class="text-muted mt-2 d-block">Hold Ctrl/Cmd to select multiple wrestlers</small>' +
+            '<small class="text-muted mt-2 d-block">Hold Ctrl/Cmd to select multiple wrestlers' +
+            (matchType === 'rumble' && isRumbleRoyaleShow ? ' (Rumble Royale requires exactly 30)' : '') +
+            '</small>' +
             '</div></div>';
     
     container.innerHTML = html;

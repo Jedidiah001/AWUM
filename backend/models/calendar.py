@@ -53,7 +53,8 @@ class Calendar:
     5. Summer Slamfest - Week 32 (August)
     6. Autumn Annihilation - Week 40 (October)
     7. Night of Glory - Week 44 (November)
-    8. Victory Dome - Week 52 (December)
+    8. LegacyMania Night 1 - Week 51 (December)
+    9. LegacyMania Night 2 - Week 52 (December)
     """
     
     # PPV/PLE Configuration
@@ -115,12 +116,20 @@ class Calendar:
             'replaces_show': 'ROC Alpha'
         },
         {
-            'week': 52,
-            'name': 'Victory Dome',
+            'week': 51,
+            'name': 'LegacyMania Night 1',
             'brand': 'Cross-Brand',
             'tier': 'major',
-            'description': 'Biggest event of the year (WrestleMania equivalent)',
-            'replaces_show': 'ROC Vanguard'  # Takes Saturday slot
+            'description': 'LegacyMania two-night spectacular begins',
+            'replaces_show': 'ROC Velocity'
+        },
+        {
+            'week': 52,
+            'name': 'LegacyMania Night 2',
+            'brand': 'Cross-Brand',
+            'tier': 'major',
+            'description': 'LegacyMania climax with world title main events',
+            'replaces_show': 'ROC Vanguard'
         }
     ]
     

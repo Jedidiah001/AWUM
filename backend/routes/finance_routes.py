@@ -12,6 +12,11 @@ _tables_ensured = False
 
 DEFAULT_SETTINGS = {
     'ppv_price': 49.99,
+    'show_ticket_prices': {
+        'weekly_tv': 50,
+        'minor_ppv': 75,
+        'major_ppv': 100,
+    },
     'ticket_tiers': {
         'floor': 120,
         'lower_bowl': 80,
@@ -62,6 +67,7 @@ def _ensure_tables():
         CREATE TABLE IF NOT EXISTS finance_settings (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             ppv_price REAL NOT NULL DEFAULT 49.99,
+            show_ticket_prices_json TEXT NOT NULL DEFAULT '{}',
             ticket_tiers_json TEXT NOT NULL DEFAULT '{}',
             budget_allocations_json TEXT NOT NULL DEFAULT '{}',
             updated_at TEXT NOT NULL
@@ -123,16 +129,21 @@ def _ensure_tables():
             created_at TEXT NOT NULL
         );
     """)
+    cursor.execute("PRAGMA table_info(finance_settings)")
+    existing_cols = {row[1] for row in cursor.fetchall()}
+    if 'show_ticket_prices_json' not in existing_cols:
+        cursor.execute("ALTER TABLE finance_settings ADD COLUMN show_ticket_prices_json TEXT NOT NULL DEFAULT '{}'")
 
     now = datetime.now().isoformat()
     cursor.execute(
         """
         INSERT OR IGNORE INTO finance_settings
-        (id, ppv_price, ticket_tiers_json, budget_allocations_json, updated_at)
-        VALUES (1, ?, ?, ?, ?)
+        (id, ppv_price, show_ticket_prices_json, ticket_tiers_json, budget_allocations_json, updated_at)
+        VALUES (1, ?, ?, ?, ?, ?)
         """,
         (
             DEFAULT_SETTINGS['ppv_price'],
+            json.dumps(DEFAULT_SETTINGS['show_ticket_prices']),
             json.dumps(DEFAULT_SETTINGS['ticket_tiers']),
             json.dumps(DEFAULT_SETTINGS['budget_allocations']),
             now,
@@ -151,10 +162,12 @@ def _load_settings(db):
         return DEFAULT_SETTINGS.copy()
 
     data = dict(row)
+    show_ticket_prices = json.loads(data.get('show_ticket_prices_json') or '{}')
     ticket_tiers = json.loads(data.get('ticket_tiers_json') or '{}')
     budget_allocations = json.loads(data.get('budget_allocations_json') or '{}')
     return {
         'ppv_price': float(data.get('ppv_price', DEFAULT_SETTINGS['ppv_price'])),
+        'show_ticket_prices': {**DEFAULT_SETTINGS['show_ticket_prices'], **show_ticket_prices},
         'ticket_tiers': {**DEFAULT_SETTINGS['ticket_tiers'], **ticket_tiers},
         'budget_allocations': {**DEFAULT_SETTINGS['budget_allocations'], **budget_allocations},
     }
@@ -164,6 +177,7 @@ def _save_settings(db, payload):
     _ensure_tables()
     settings = _load_settings(db)
     ticket_tiers = payload.get('ticket_tiers') or settings['ticket_tiers']
+    show_ticket_prices = payload.get('show_ticket_prices') or settings.get('show_ticket_prices', DEFAULT_SETTINGS['show_ticket_prices'])
     budget_allocations = payload.get('budget_allocations') or settings['budget_allocations']
     ppv_price = float(payload.get('ppv_price', settings['ppv_price']))
 
@@ -171,11 +185,12 @@ def _save_settings(db, payload):
     cursor.execute(
         """
         UPDATE finance_settings
-        SET ppv_price = ?, ticket_tiers_json = ?, budget_allocations_json = ?, updated_at = ?
+        SET ppv_price = ?, show_ticket_prices_json = ?, ticket_tiers_json = ?, budget_allocations_json = ?, updated_at = ?
         WHERE id = 1
         """,
         (
             ppv_price,
+            json.dumps(show_ticket_prices),
             json.dumps(ticket_tiers),
             json.dumps(budget_allocations),
             datetime.now().isoformat(),
