@@ -528,8 +528,8 @@ def api_create_secret_signing():
         booked_match = False
         auto_book_message = ""
         if planned_show_id and opponent_name:
-            roster = get_universe().roster.get_all_wrestlers()
-            opponent = next((w for w in roster if w.name == opponent_name), None)
+            roster = get_database().get_all_wrestlers(active_only=False)
+            opponent = next((w for w in roster if w.get("name") == opponent_name), None)
             if opponent:
                 db = get_database()
                 show_draft = db.get_show_draft(planned_show_id) or {
@@ -546,7 +546,7 @@ def api_create_secret_signing():
                 show_draft.setdefault("matches", []).append({
                     "match_id": f"secret_signing_{uuid.uuid4().hex[:10]}",
                     "side_a": {"wrestler_ids": [fa_id], "wrestler_names": [wrestler_name], "is_tag_team": False},
-                    "side_b": {"wrestler_ids": [opponent.id], "wrestler_names": [opponent.name], "is_tag_team": False},
+                    "side_b": {"wrestler_ids": [opponent["id"]], "wrestler_names": [opponent["name"]], "is_tag_team": False},
                     "match_type": "singles",
                     "is_title_match": False,
                     "title_id": None,
@@ -573,7 +573,7 @@ def api_create_secret_signing():
                 )
                 db.conn.commit()
                 booked_match = True
-                auto_book_message = f" Match auto-booked vs {opponent.name} on booking page."
+                auto_book_message = f" Match auto-booked vs {opponent['name']} on booking page."
 
         return jsonify({
             "success": True,
