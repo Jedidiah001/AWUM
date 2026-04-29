@@ -453,6 +453,7 @@
             renderProductionPlan(productionPlan);
             renderFullCard();
             loadLegacyManiaPanel();
+            await loadLegacyManiaPanel();
 
             // Reset edit state if modals are dismissed
             try {
@@ -2677,6 +2678,7 @@ function generateSegments() {
 
             renderFullCard();
             loadLegacyManiaPanel();
+            await loadLegacyManiaPanel();
             showToast('Generated ' + data.segments.length + ' segments', 'success');
         } else {
             throw new Error(data.error || 'Failed to generate segments');
@@ -2719,6 +2721,7 @@ function regenerateCard() {
             renderProductionPlan(productionPlan);
             renderFullCard();
             loadLegacyManiaPanel();
+            await loadLegacyManiaPanel();
             
             showToast('Card regenerated successfully!', 'success');
         } else {
