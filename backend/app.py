@@ -401,6 +401,12 @@ def legacy_expansion_view():
     """Dashboard for feature sets added in Steps 126-212."""
     return render_template('legacy_expansion.html')
 
+
+@app.route('/history-hub')
+def history_hub_view():
+    """Historical records and archive dashboard."""
+    return render_template('history_hub.html')
+
 @app.route('/contract-card/<share_id>')
 def contract_card_view(share_id):
     """View a shared contract card"""
