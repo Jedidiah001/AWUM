@@ -81,26 +81,8 @@ class RegressionTests(unittest.TestCase):
 
         self.assertEqual([expiring.id], [w.id for w in expiring_contracts])
 
-    def test_contract_alert_generation_ignores_missing_weeks_remaining(self):
+    def test_contract_alert_generation_handles_weeks_remaining_edge_cases(self):
         contract_manager = ContractManager()
-
-        missing_weeks = Wrestler(
-            wrestler_id='w_missing_alert',
-            name='Missing Alert Weeks',
-            age=34,
-            gender='Male',
-            alignment='Face',
-            role='Midcard',
-            primary_brand='ROC Alpha',
-            brawling=62,
-            technical=58,
-            speed=61,
-            mic=57,
-            psychology=63,
-            stamina=60,
-            years_experience=9,
-        )
-        missing_weeks.contract.weeks_remaining = None
 
         monitored = Wrestler(
             wrestler_id='w_monitored',
@@ -120,14 +102,39 @@ class RegressionTests(unittest.TestCase):
         )
         monitored.contract.weeks_remaining = 6
 
-        alerts = contract_manager.generate_alerts_for_contracts(
-            [missing_weeks, monitored],
-            current_week=10,
-            current_year=2,
-        )
+        invalid_cases = [
+            ('none', None),
+            ('negative', -1),
+        ]
+        for label, invalid_weeks in invalid_cases:
+            with self.subTest(case=label):
+                edge_case = Wrestler(
+                    wrestler_id=f'w_{label}_weeks',
+                    name=f'Invalid Weeks {label}',
+                    age=34,
+                    gender='Male',
+                    alignment='Face',
+                    role='Midcard',
+                    primary_brand='ROC Alpha',
+                    brawling=62,
+                    technical=58,
+                    speed=61,
+                    mic=57,
+                    psychology=63,
+                    stamina=60,
+                    years_experience=9,
+                )
+                edge_case.contract.weeks_remaining = invalid_weeks
 
-        self.assertTrue(all(alert.wrestler_id != missing_weeks.id for alert in alerts))
-        self.assertTrue(any(alert.wrestler_id == monitored.id for alert in alerts))
+                alerts = contract_manager.generate_alerts_for_contracts(
+                    [edge_case, monitored],
+                    current_week=10,
+                    current_year=2,
+                )
+                alert_ids = {alert.wrestler_id for alert in alerts}
+
+                self.assertEqual({monitored.id}, alert_ids)
+                self.assertEqual(1, len(alerts))
 
     def test_championship_defense_fields_persist(self):
         temp_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'test_tmp'))

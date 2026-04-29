@@ -602,8 +602,8 @@ class ContractManager:
             if weeks is None:
                 continue
             
-            # Only create alerts for contracts <= 26 weeks or expired
-            if weeks <= 26 or weeks == 0:
+            # Only create alerts for valid non-negative contracts <= 26 weeks (including 0/expired)
+            if 0 <= weeks <= 26:
                 market_value = self.calculate_market_value(wrestler)
                 
                 # Determine re-signing probability
