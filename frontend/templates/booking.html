@@ -1618,18 +1618,26 @@ function updateWinnerDropdown() {
 function populateTitleDropdown(genderDivision) {
     var select = document.getElementById('titleSelect');
     select.innerHTML = '<option value="">Choose a title...</option>';
-    
+
+    var showBrand = String((currentShowDraft && currentShowDraft.brand) || '').trim().toLowerCase();
+
     var titles = Object.values(allTitles).filter(function(t) {
+        var titleBrand = String(t.current_brand || t.assigned_brand || t.brand || '').trim().toLowerCase();
+        var isBrandMatch = !showBrand || !titleBrand || titleBrand === showBrand || titleBrand === 'cross-brand';
+
+        if (!isBrandMatch) return false;
+
         if (genderDivision === 'intergender') {
-            // Intergender can compete for either division (rare, but possible)
-            return t.current_brand === currentShowDraft.brand;
-        } else {
-            // Filter by gender division
-            return t.current_brand === currentShowDraft.brand && 
-                   t.division === genderDivision;
+            return true;
         }
+
+        return (t.division || '').toLowerCase() === String(genderDivision || '').toLowerCase();
     });
-    
+
+    titles.sort(function(a, b) {
+        return (a.name || '').localeCompare(b.name || '');
+    });
+
     titles.forEach(function(t) {
         var divisionLabel = t.division === 'male' ? '♂' : (t.division === 'female' ? '♀' : '⚥');
         var option = document.createElement('option');
@@ -1639,10 +1647,6 @@ function populateTitleDropdown(genderDivision) {
         select.appendChild(option);
     });
 }
-
-// ========================================================================
-// PART 3C: CONFIRM ADD MATCH & CARD RENDERING
-// ========================================================================
 
 // ========================================================================
 // TOGGLE TITLE OPTIONS
