@@ -612,6 +612,7 @@
                         <input id="customPpvLocation" class="form-control mb-2" placeholder="Location">
                         <input id="customPpvYear" type="number" class="form-control mb-2" placeholder="Year">
                         <input id="customPpvWeek" type="number" class="form-control mb-2" placeholder="Week 1-52">
+                        <input id="customPpvDate" type="date" class="form-control mb-2">
                         <select id="customPpvTier" class="form-select mb-2"><option value="minor">Minor PPV</option><option value="major">Major PPV</option></select>
                         <button class="btn btn-secondary w-100" onclick="createCustomPPV()">Create Custom PPV</button>
                     </div>
@@ -628,6 +629,12 @@
                         <input id="arcName" class="form-control mb-2" placeholder="Long-Term Arc Name">
                         <input id="arcEnd" class="form-control mb-2" placeholder="EndYear,EndWeek">
                         <button class="btn btn-primary w-100" onclick="bookAdvancedFeature('long_term_arc')">Save Long-Term Arc</button>
+                        <input id="mainEventTitle" class="form-control mt-2 mb-2" placeholder="Main Event Match Title">
+                        <input id="mainEventScores" class="form-control mb-2" placeholder="Quality,Draw,Placement">
+                        <button class="btn btn-success w-100 mb-2" onclick="bookAdvancedFeature('main_event_selection')">Save Main Event Grade</button>
+                        <input id="debutSecrecyWrestlerId" class="form-control mb-2" placeholder="Debut Wrestler ID">
+                        <input id="debutSecrecyMeta" class="form-control mb-2" placeholder="SigningYear,SigningWeek,Leaked(0/1)">
+                        <button class="btn btn-warning w-100" onclick="bookAdvancedFeature('surprise_debut')">Save Surprise Debut Secrecy</button>
                     </div>
                 </div>
             </div>
@@ -1204,6 +1211,7 @@ async function createCustomPPV() {
         location: document.getElementById('customPpvLocation').value,
         year: parseInt(document.getElementById('customPpvYear').value || '1'),
         week: parseInt(document.getElementById('customPpvWeek').value || '1'),
+        date: document.getElementById('customPpvDate').value || null,
         tier: document.getElementById('customPpvTier').value
     };
     const r = await fetch('/api/show-production/custom-ppv/create', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
@@ -1223,6 +1231,12 @@ async function bookAdvancedFeature(feature_type) {
     } else if (feature_type === 'long_term_arc') {
         const [endYear, endWeek] = (document.getElementById('arcEnd').value || '1,12').split(',').map(v => parseInt(v.trim() || '1'));
         payload = { ...payload, name: document.getElementById('arcName').value, planned_end_year: endYear, planned_end_week: endWeek, beats: ['setup', 'first escalation', 'complication', 'second escalation', 'near-miss', 'resolution'] };
+    } else if (feature_type === 'main_event_selection') {
+        const [q, d, p] = (document.getElementById('mainEventScores').value || '70,70,70').split(',').map(v => parseFloat(v.trim() || '70'));
+        payload = { ...payload, match_title: document.getElementById('mainEventTitle').value || 'Main Event', quality_score: q, draw_score: d, placement_correctness: p };
+    } else if (feature_type === 'surprise_debut') {
+        const [sy, sw, lk] = (document.getElementById('debutSecrecyMeta').value || '1,1,0').split(',').map(v => v.trim());
+        payload = { ...payload, wrestler_id: document.getElementById('debutSecrecyWrestlerId').value, signing_year: parseInt(sy || '1'), signing_week: parseInt(sw || '1'), leaked: lk === '1' };
     }
     const r = await fetch('/api/show-production/advanced/book', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
     const d = await r.json();
