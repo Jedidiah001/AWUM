@@ -446,6 +446,38 @@ def run_show():
         # Clear the draft
         database.clear_show_draft(show_draft.show_id)
 
+        
+        # LegacyMania/Rumble Royale progression logic
+        try:
+            if (show_draft.show_name or '').lower() == 'rumble royale':
+                match_lookup = {m.match_id: m for m in show_draft.matches}
+                for result in show_result.match_results:
+                    if getattr(result, 'match_type', '') != 'rumble':
+                        continue
+                    draft_match = match_lookup.get(getattr(result, 'match_id', None))
+                    division = getattr(draft_match, 'gender_division', None) or 'male'
+                    winner_id = getattr(result, 'winner_id', None)
+                    if winner_id:
+                        _award_rumble_opportunity(database, universe, winner_id, division, show_draft.year)
+
+            if (show_draft.show_name or '').lower().startswith('legacymania'):
+                # Brand transfer: title winners move to title's home brand
+                for result in show_result.match_results:
+                    if not getattr(result, 'is_title_match', False):
+                        continue
+                    title_id = getattr(result, 'title_id', None)
+                    winner_id = getattr(result, 'winner_id', None)
+                    if not title_id or not winner_id:
+                        continue
+                    title = next((t for t in universe.championships if getattr(t, 'id', None) == title_id), None)
+                    wrestler = next((w for w in universe.wrestlers if getattr(w, 'id', None) == winner_id), None)
+                    if title and wrestler and getattr(title, 'current_brand', None):
+                        wrestler.current_brand = title.current_brand
+                        wrestler.primary_brand = title.current_brand
+                universe.save_all()
+        except Exception as legacy_err:
+            print(f'Legacy progression warning: {legacy_err}')
+
         show_result_data = show_result.to_dict()
         show_result_data['tv_rating'] = round(show_result.overall_rating * 1.5, 2)
         show_result_data['highlights'] = generate_show_highlights(show_result.match_results, production_plan)
@@ -463,6 +495,61 @@ def run_show():
             'success': False,
             'error': str(e)
         }), 500
+
+
+
+def _ensure_legacy_tables(database):
+    c = database.conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS rumble_title_opportunities (
+            id TEXT PRIMARY KEY,
+            year INTEGER NOT NULL,
+            rumble_winner_id TEXT NOT NULL,
+            rumble_winner_name TEXT NOT NULL,
+            division TEXT NOT NULL,
+            target_title_id TEXT,
+            target_title_name TEXT,
+            target_brand TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            storyline_text TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    database.conn.commit()
+
+
+def _award_rumble_opportunity(database, universe, winner_id: str, division: str, year: int):
+    import uuid as _uuid
+    _ensure_legacy_tables(database)
+    winner = next((w for w in universe.wrestlers if getattr(w, 'id', None) == winner_id), None)
+    if not winner:
+        return
+
+    titles = [t for t in universe.championships if getattr(t, 'division', 'male') == division and not getattr(t, 'retired', False)]
+    titles = sorted(titles, key=lambda t: getattr(t, 'prestige', 0), reverse=True)[:2]
+    target_title = titles[0] if titles else None
+    target_brand = getattr(target_title, 'current_brand', None) if target_title else None
+
+    storyline = (
+        f"After surviving the {division.title()} Royal Rumble at Rumble Royale, {getattr(winner,'name',winner_id)} "
+        f"has earned a LegacyMania world title opportunity. The winner can challenge for a top title "
+        f"on ROC Alpha or ROC Velocity, igniting cross-brand pressure heading into LegacyMania Night 1 and Night 2."
+    )
+
+    c = database.conn.cursor()
+    c.execute(
+        """
+        INSERT INTO rumble_title_opportunities
+        (id, year, rumble_winner_id, rumble_winner_name, division, target_title_id, target_title_name, target_brand, status, storyline_text, created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)
+        """,
+        (
+            str(_uuid.uuid4()), year, winner_id, getattr(winner, 'name', winner_id), division,
+            getattr(target_title, 'id', None), getattr(target_title, 'name', None), target_brand,
+            'pending', storyline, datetime.now().isoformat()
+        )
+    )
+    database.conn.commit()
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -615,6 +702,17 @@ def generate_show_highlights(match_results: list, production_plan: dict) -> list
         )
 
     return highlights
+
+
+@booking_bp.route('/legacy/rumble-opportunities', methods=['GET'])
+def get_rumble_opportunities():
+    try:
+        database = get_database()
+        _ensure_legacy_tables(database)
+        rows = database.conn.cursor().execute("SELECT * FROM rumble_title_opportunities ORDER BY created_at DESC LIMIT 50").fetchall()
+        return jsonify({'success': True, 'opportunities': [dict(r) for r in rows]})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # ============================================================================
 # GET/DELETE SHOW DRAFT
