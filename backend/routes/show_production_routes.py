@@ -102,6 +102,19 @@ def _ensure_tables():
             status          TEXT DEFAULT 'planned',
             created_at      TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS debut_secrecy_tracking (
+            secrecy_id       TEXT PRIMARY KEY,
+            wrestler_id      TEXT NOT NULL,
+            signing_year     INTEGER NOT NULL,
+            signing_week     INTEGER NOT NULL,
+            leaked           INTEGER NOT NULL DEFAULT 0,
+            leak_week        INTEGER,
+            debut_year       INTEGER,
+            debut_week       INTEGER,
+            secrecy_weeks    INTEGER NOT NULL DEFAULT 0,
+            multiplier       REAL NOT NULL DEFAULT 1.0,
+            created_at       TEXT NOT NULL
+        );
 
         CREATE TABLE IF NOT EXISTS production_returns (
             return_id       TEXT PRIMARY KEY,
@@ -188,6 +201,18 @@ def _ensure_tables():
             follow_through      INTEGER NOT NULL,
             trust_impact        INTEGER NOT NULL,
             created_at          TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS main_event_quality_history (
+            record_id             TEXT PRIMARY KEY,
+            show_id               TEXT NOT NULL,
+            year                  INTEGER NOT NULL,
+            week                  INTEGER NOT NULL,
+            match_title           TEXT NOT NULL,
+            quality_score         REAL NOT NULL,
+            draw_score            REAL NOT NULL,
+            placement_correctness REAL NOT NULL,
+            legacy_impact         REAL NOT NULL,
+            created_at            TEXT NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS pacing_sessions (
@@ -1741,17 +1766,24 @@ def api_create_custom_ppv():
     try:
         _ensure_tables()
         payload = request.get_json(force=True) or {}
-        required = ['name', 'year', 'week', 'tier', 'location']
+        required = ['name', 'tier', 'location']
         missing = [k for k in required if not payload.get(k)]
         if missing:
             return jsonify({"success": False, "error": f"Missing fields: {', '.join(missing)}"}), 400
+        if payload.get('date'):
+            dt = datetime.fromisoformat(str(payload['date']))
+            year = int(payload.get('year', max(1, dt.year - 2024)))
+            week = int(payload.get('week', min(52, max(1, ((dt.timetuple().tm_yday - 1) // 7) + 1))))
+        else:
+            year = int(payload.get('year', _game_state()[0]))
+            week = int(payload.get('week', _game_state()[1]))
         custom_ppv_id = f"cppv_{uuid.uuid4().hex[:10]}"
         _db().conn.execute("""
             INSERT INTO custom_ppvs
             (custom_ppv_id, name, year, week, day_of_week, tier, location, brand, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)
         """, (
-            custom_ppv_id, str(payload['name']).strip(), int(payload['year']), int(payload['week']),
+            custom_ppv_id, str(payload['name']).strip(), year, week,
             payload.get('day_of_week', 'Sunday'), payload['tier'], payload['location'],
             payload.get('brand', 'Cross-Brand'), datetime.utcnow().isoformat()
         ))
@@ -1797,6 +1829,35 @@ def api_book_advanced_features():
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", (sid, show_id, year, week, p.get('title', 'Storyline Swerve'), s, l, f, trust_impact, now))
             conn.commit()
             return jsonify({"success": True, "feature_id": sid, "trust_impact": trust_impact})
+        if feature_type == 'surprise_debut':
+            wid = str(p.get('wrestler_id', '')).strip()
+            if not wid:
+                return jsonify({"success": False, "error": "wrestler_id is required"}), 400
+            signing_year = int(p.get('signing_year', year))
+            signing_week = int(p.get('signing_week', max(1, week - 1)))
+            leaked = 1 if p.get('leaked', False) else 0
+            secrecy_weeks = max(0, ((year - signing_year) * 52) + (week - signing_week))
+            base_mult = min(2.6, 1.0 + (secrecy_weeks * 0.08))
+            mult = round(base_mult * (0.4 if leaked else 1.0), 3)
+            sid = f"sec_{uuid.uuid4().hex[:10]}"
+            conn.execute("""INSERT INTO debut_secrecy_tracking
+                (secrecy_id, wrestler_id, signing_year, signing_week, leaked, leak_week, debut_year, debut_week, secrecy_weeks, multiplier, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (sid, wid, signing_year, signing_week, leaked, int(p.get('leak_week', week if leaked else 0) or 0), year, week, secrecy_weeks, mult, now))
+            conn.commit()
+            return jsonify({"success": True, "feature_id": sid, "secrecy_weeks": secrecy_weeks, "surprise_multiplier": mult})
+        if feature_type == 'main_event_selection':
+            quality = float(p.get('quality_score', 70))
+            draw = float(p.get('draw_score', 70))
+            placement = float(p.get('placement_correctness', 70))
+            legacy = round((quality * 0.5 + draw * 0.3 + placement * 0.2 - 60) / 8, 3)
+            rid = f"mev_{uuid.uuid4().hex[:10]}"
+            conn.execute("""INSERT INTO main_event_quality_history
+                (record_id, show_id, year, week, match_title, quality_score, draw_score, placement_correctness, legacy_impact, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (rid, show_id, year, week, p.get('match_title', 'Main Event'), quality, draw, placement, legacy, now))
+            conn.commit()
+            return jsonify({"success": True, "feature_id": rid, "legacy_impact": legacy})
 
         if feature_type == 'long_term_arc':
             aid = f"arc_{uuid.uuid4().hex[:10]}"
