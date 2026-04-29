@@ -251,6 +251,9 @@ def generate_show_card():
                 'feud_id': m.get('feud_id'),
             }
         
+        # Rebalance for wider roster showcase opportunities
+        matches = _rebalance_matches_for_showcase(matches, active_roster, show_type)
+
         # Add matches to show draft
         for i, match_dict in enumerate(matches):
             normalized = normalize_match_dict(match_dict, i + 1)
@@ -497,6 +500,49 @@ def run_show():
         }), 500
 
 
+
+
+
+def _rebalance_matches_for_showcase(matches: list, roster: list, show_type: str) -> list:
+    """Ensure more roster variety so more talent gets TV opportunities."""
+    if show_type != 'weekly_tv' or not matches:
+        return matches
+
+    used = set()
+    for m in matches:
+        for p in m.get('participants', []):
+            if isinstance(p, str):
+                used.add(p)
+            elif isinstance(p, list):
+                used.update([x for x in p if x])
+            elif isinstance(p, dict):
+                if p.get('male'): used.add(p['male'])
+                if p.get('female'): used.add(p['female'])
+
+    available = [w for w in roster if w.get('id') and w.get('id') not in used]
+    if len(available) < 2:
+        return matches
+
+    a, b = available[0], available[1]
+    showcase = {
+        'match_type': 'singles',
+        'participants': [a['id'], b['id']],
+        'is_title_match': False,
+        'booking_bias': 'even',
+        'importance': 'normal'
+    }
+
+    replace_idx = None
+    for i, m in enumerate(matches):
+        if not m.get('is_title_match') and m.get('match_type') in ('singles', 'triple_threat', 'fatal_4way'):
+            replace_idx = i
+            break
+
+    if replace_idx is not None:
+        matches[replace_idx] = showcase
+    else:
+        matches.append(showcase)
+    return matches
 
 def _ensure_legacy_tables(database):
     c = database.conn.cursor()
