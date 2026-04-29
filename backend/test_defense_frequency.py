@@ -4,12 +4,25 @@ Test script for STEP 25: Championship Defense Frequency
 Run this to verify all features are working correctly.
 """
 
-import requests
 import json
+
+import pytest
+
+try:
+    import requests
+except ImportError:  # pragma: no cover - optional dependency for integration script
+    requests = None
 
 BASE_URL = 'http://localhost:8080'
 
+
+def _require_requests():
+    if requests is None:
+        pytest.skip("requests is not installed; skipping integration-only defense frequency script")
+
+
 def test_defense_frequency_system():
+    _require_requests()
     print("="*60)
     print("STEP 25: Championship Defense Frequency - Verification Tests")
     print("="*60)

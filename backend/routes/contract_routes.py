@@ -9,7 +9,7 @@ import random
 from flask import Blueprint, jsonify, request, current_app
 from economy.contracts import contract_manager
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 contract_bp = Blueprint('contract', __name__)
 
