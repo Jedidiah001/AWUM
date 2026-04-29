@@ -556,6 +556,14 @@ class MatchSimulator:
             if not booked_runner_up_wrestler:
                 print(f"      ⚠️ Booked runner-up ID {match_draft.booked_runner_up} not found in participants")
         
+        booked_iron_man_wrestler = None
+        if hasattr(match_draft, 'booked_iron_man') and match_draft.booked_iron_man:
+            booked_iron_man_wrestler = next((w for w in all_participants if w.id == match_draft.booked_iron_man), None)
+
+        booked_most_elims_wrestler = None
+        if hasattr(match_draft, 'booked_most_eliminations') and match_draft.booked_most_eliminations:
+            booked_most_elims_wrestler = next((w for w in all_participants if w.id == match_draft.booked_most_eliminations), None)
+
         # Validate winner and runner-up are different
         if booked_winner_wrestler and booked_runner_up_wrestler:
             if booked_winner_wrestler.id == booked_runner_up_wrestler.id:
@@ -568,7 +576,9 @@ class MatchSimulator:
             match_type=match_draft.match_type,
             universe_state=universe_state,
             booked_winner=booked_winner_wrestler,
-            booked_runner_up=booked_runner_up_wrestler
+            booked_runner_up=booked_runner_up_wrestler,
+            booked_iron_man=booked_iron_man_wrestler,
+            booked_most_eliminations=booked_most_elims_wrestler
         )
         
         winner = br_result['winner']
@@ -604,6 +614,12 @@ class MatchSimulator:
         # Build elimination summary
         elimination_order = br_result.get('elimination_order', [])
         elimination_summary = ', '.join([w.name for w in elimination_order[:5]]) if elimination_order else 'N/A'
+        extra_notes = []
+        if br_result.get('booked_iron_man'):
+            extra_notes.append(f"Iron Man: {br_result['booked_iron_man'].name}")
+        if br_result.get('booked_most_eliminations'):
+            extra_notes.append(f"Most Eliminations: {br_result['booked_most_eliminations'].name}")
+        note_text = (' ' + ' | '.join(extra_notes)) if extra_notes else ''
         
         result = MatchResult(
             match_id=match_draft.match_id,
@@ -617,7 +633,7 @@ class MatchSimulator:
             duration_minutes=duration,
             star_rating=star_rating,
             highlights=highlights,
-            match_summary=f"{winner.name} won the {match_draft.match_type.replace('_', ' ').upper()}! Elimination order: {elimination_summary}...",
+            match_summary=f"{winner.name} won the {match_draft.match_type.replace('_', ' ').upper()}! Elimination order: {elimination_summary}...{note_text}",
             is_upset=is_upset,
             card_position=match_draft.card_position,
             is_title_match=match_draft.is_title_match,

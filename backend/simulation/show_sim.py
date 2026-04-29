@@ -639,6 +639,10 @@ class ShowSimulator:
         except Exception as e:
             print(f"   ⚠️ Error saving storyline state: {e}")
         
+
+        # Keep all active champions aligned to their title brand after each show.
+        self._align_champions_to_title_brands(universe_state)
+
         # ================================================================
         # STEP 12: AUTO-SAVE AFTER SHOW
         # ================================================================
@@ -673,6 +677,28 @@ class ShowSimulator:
         
         return show_result
     
+    def _align_champions_to_title_brands(self, universe_state) -> None:
+        """Ensure title holders are on the same brand as their non-cross-brand championships."""
+        try:
+            championships = getattr(universe_state, 'championships', []) or []
+            for title in championships:
+                title_brand = getattr(title, 'assigned_brand', None)
+                holder_id = getattr(title, 'current_holder_id', None)
+                if not title_brand or title_brand == 'Cross-Brand' or not holder_id:
+                    continue
+                wrestler = universe_state.get_wrestler_by_id(holder_id)
+                if not wrestler:
+                    continue
+                current_brand = getattr(wrestler, 'primary_brand', None)
+                if current_brand != title_brand:
+                    wrestler.primary_brand = title_brand
+                    if hasattr(wrestler, 'current_brand'):
+                        wrestler.current_brand = title_brand
+                    universe_state.save_wrestler(wrestler)
+                    print(f"      🔄 Brand alignment: {wrestler.name} moved to {title_brand} (champion of {title.name})")
+        except Exception as e:
+            print(f"   ⚠️ Champion-brand alignment step failed: {e}")
+
     # ====================================================================
     # SEGMENT SIMULATION (STEP 15)
     # ====================================================================
@@ -1240,6 +1266,18 @@ class ShowSimulator:
                             year=show_result.year,
                             week=show_result.week
                         )
+
+                        # Keep champions aligned to the brand their title belongs to.
+                        title_brand = getattr(title, 'assigned_brand', None)
+                        if title_brand and title_brand != 'Cross-Brand':
+                            try:
+                                new_champion.primary_brand = title_brand
+                                if hasattr(new_champion, 'current_brand'):
+                                    new_champion.current_brand = title_brand
+                                universe_state.save_wrestler(new_champion)
+                                print(f"      🔄 Brand alignment: {new_champion.name} moved to {title_brand} as champion")
+                            except Exception as e:
+                                print(f"      ⚠️ Failed to align champion brand for {new_champion.name}: {e}")
                         
                         # STEP 30: Create reign goals for new champion
                         try:
