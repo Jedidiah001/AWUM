@@ -234,6 +234,13 @@
                     <small class="text-muted">Optional: Pre-determine the winner</small>
                 </div>
                 
+
+                <div class="mb-3" id="rumbleBookingDiv" style="display:none;">
+                    <label class="form-label fw-bold text-primary"><i class="bi bi-list-stars"></i> Rumble Booking Controls</label>
+                    <select class="form-select mb-2" id="bookedRunnerUpSelect"><option value="">-- Runner-up / Last Eliminated (Optional) --</option></select>
+                    <select class="form-select mb-2" id="bookedIronManSelect"><option value="">-- Iron Man / Lasts Longest (Optional) --</option></select>
+                    <select class="form-select" id="bookedMostElimsSelect"><option value="">-- Most Eliminations (Optional) --</option></select>
+                </div>
                 <!-- Special Match Type -->
                 <div class="mb-3">
                     <label class="form-label fw-bold">
@@ -453,7 +460,6 @@
             renderProductionPlan(productionPlan);
             renderFullCard();
             loadLegacyManiaPanel();
-            await loadLegacyManiaPanel();
 
             // Reset edit state if modals are dismissed
             try {
@@ -1171,6 +1177,7 @@ function updateMatchTypeUI() {
     if (!selectedOption || !selectedOption.value) {
         document.getElementById('wrestlerSelectionContainer').innerHTML = '';
         document.getElementById('winnerSelectionDiv').style.display = 'none';
+    document.getElementById('rumbleBookingDiv').style.display = 'none';
         return;
     }
     
@@ -1207,6 +1214,7 @@ function updateMatchTypeUI() {
     
     // Show winner selection
     document.getElementById('winnerSelectionDiv').style.display = 'block';
+    document.getElementById('rumbleBookingDiv').style.display = (matchType === 'rumble' || matchType === 'battle_royal') ? 'block' : 'none';
 }
 
 // ========================================================================
@@ -1500,7 +1508,7 @@ function renderBattleRoyalSelection(container, matchType) {
             '<input type="number" class="form-control mb-3" id="battleRoyalCount" ' +
             'min="' + minCount + '" max="' + maxCount + '" value="' + minCount + '">' +
             '<label class="form-label fw-bold">Select Participants</label>' +
-            '<select class="form-select" id="battleRoyalParticipants" multiple size="10">';
+            '<select class="form-select" id="battleRoyalParticipants" multiple size="10" onchange="updateWinnerDropdown()">';
     
     availableWrestlers.forEach(function(w) {
         html += '<option value="' + w.id + '">' + w.ring_name + ' (' + w.overall_rating + ')</option>';
@@ -1549,14 +1557,34 @@ function renderWrestlerDropdown(id, wrestlers, genderFilter) {
 
 function updateWinnerDropdown() {
     var winnerSelect = document.getElementById('bookedWinnerSelect');
+    if (!winnerSelect) return;
+
+    var runnerUpSelect = document.getElementById('bookedRunnerUpSelect');
+    var ironManSelect = document.getElementById('bookedIronManSelect');
+    var mostElimsSelect = document.getElementById('bookedMostElimsSelect');
+
     winnerSelect.innerHTML = '<option value="">-- Random (Based on ratings) --</option>';
-    
-    // Collect all selected wrestlers
+    if (runnerUpSelect) runnerUpSelect.innerHTML = '<option value="">-- Runner-up / Last Eliminated (Optional) --</option>';
+    if (ironManSelect) ironManSelect.innerHTML = '<option value="">-- Iron Man / Lasts Longest (Optional) --</option>';
+    if (mostElimsSelect) mostElimsSelect.innerHTML = '<option value="">-- Most Eliminations (Optional) --</option>';
+
     var selectedWrestlers = [];
     var selects = document.getElementById('wrestlerSelectionContainer').querySelectorAll('select');
-    
+
     selects.forEach(function(select) {
-        if (select.value && select.id !== 'bookedWinnerSelect') {
+        if (select.id === 'bookedWinnerSelect' || select.id === 'bookedRunnerUpSelect' || select.id === 'bookedIronManSelect' || select.id === 'bookedMostElimsSelect') {
+            return;
+        }
+
+        if (select.multiple) {
+            Array.from(select.selectedOptions || []).forEach(function(opt) {
+                var wrestlerId = opt.value;
+                var wrestler = allWrestlers[wrestlerId];
+                if (wrestler && !selectedWrestlers.find(function(w) { return w.id === wrestlerId; })) {
+                    selectedWrestlers.push(wrestler);
+                }
+            });
+        } else if (select.value) {
             var wrestlerId = select.value;
             var wrestler = allWrestlers[wrestlerId];
             if (wrestler && !selectedWrestlers.find(function(w) { return w.id === wrestlerId; })) {
@@ -1564,14 +1592,22 @@ function updateWinnerDropdown() {
             }
         }
     });
-    
-    // Populate winner dropdown
+
     selectedWrestlers.forEach(function(w) {
         var genderIcon = w.gender === 'male' ? '♂' : '♀';
-        var option = document.createElement('option');
-        option.value = w.id;
-        option.textContent = genderIcon + ' ' + w.ring_name + ' (' + w.overall_rating + ')';
-        winnerSelect.appendChild(option);
+
+        var winnerOption = document.createElement('option');
+        winnerOption.value = w.id;
+        winnerOption.textContent = genderIcon + ' ' + w.ring_name + ' (' + w.overall_rating + ')';
+        winnerSelect.appendChild(winnerOption);
+
+        [runnerUpSelect, ironManSelect, mostElimsSelect].forEach(function(targetSelect) {
+            if (!targetSelect) return;
+            var option = document.createElement('option');
+            option.value = w.id;
+            option.textContent = genderIcon + ' ' + w.ring_name + ' (' + w.overall_rating + ')';
+            targetSelect.appendChild(option);
+        });
     });
 }
 
@@ -1770,6 +1806,13 @@ function confirmAddMatch() {
         if (bookedWinner) {
             newMatch.booked_winner = bookedWinner;
         }
+
+        var bookedRunnerUp = document.getElementById('bookedRunnerUpSelect').value;
+        if (bookedRunnerUp) newMatch.booked_runner_up = bookedRunnerUp;
+        var bookedIronMan = document.getElementById('bookedIronManSelect').value;
+        if (bookedIronMan) newMatch.booked_iron_man = bookedIronMan;
+        var bookedMostElims = document.getElementById('bookedMostElimsSelect').value;
+        if (bookedMostElims) newMatch.booked_most_eliminations = bookedMostElims;
         
         // Special stipulation
         var specialStip = document.getElementById('specialMatchType').value;
@@ -2314,6 +2357,16 @@ function editMatch(matchIndex) {
                     }
                 }
             });
+        } else if (match.match_type === 'rumble' || match.match_type === 'battle_royal') {
+            var brSelect = document.getElementById('battleRoyalParticipants');
+            var brCount = document.getElementById('battleRoyalCount');
+            var ids = Array.isArray(match.participants) ? match.participants : [];
+            if (brCount) brCount.value = ids.length || brCount.value;
+            if (brSelect) {
+                Array.from(brSelect.options || []).forEach(function(opt) {
+                    opt.selected = ids.indexOf(opt.value) !== -1;
+                });
+            }
         } else {
             // Singles/multi-person
             (match.participants || []).forEach(function(pid, idx) {
@@ -2327,6 +2380,9 @@ function editMatch(matchIndex) {
         // Winner
         var winnerSel = document.getElementById('bookedWinnerSelect');
         if (winnerSel) winnerSel.value = match.booked_winner || '';
+        var ruSel = document.getElementById('bookedRunnerUpSelect'); if (ruSel) ruSel.value = match.booked_runner_up || '';
+        var imSel = document.getElementById('bookedIronManSelect'); if (imSel) imSel.value = match.booked_iron_man || '';
+        var meSel = document.getElementById('bookedMostElimsSelect'); if (meSel) meSel.value = match.booked_most_eliminations || '';
 
     } catch (e) {
         console.error('Edit match failed:', e);
@@ -2670,7 +2726,7 @@ function generateSegments() {
         })
     })
     .then(function(response) { return response.json(); })
-    .then(function(data) {
+    .then(async function(data) {
         if (data.success && data.segments) {
             currentShowDraft.segments = (data.segments || []).map(function(seg, index) {
                 return normalizeUiSegment(seg, index);
@@ -2678,7 +2734,6 @@ function generateSegments() {
 
             renderFullCard();
             loadLegacyManiaPanel();
-            await loadLegacyManiaPanel();
             showToast('Generated ' + data.segments.length + ' segments', 'success');
         } else {
             throw new Error(data.error || 'Failed to generate segments');
@@ -2712,7 +2767,7 @@ function regenerateCard() {
         })
     })
     .then(function(response) { return response.json(); })
-    .then(function(data) {
+    .then(async function(data) {
         if (data.success) {
             currentShowDraft = normalizeShowDraftForUI(data.show_draft);
             productionPlan = data.production_plan || null;
@@ -2721,7 +2776,6 @@ function regenerateCard() {
             renderProductionPlan(productionPlan);
             renderFullCard();
             loadLegacyManiaPanel();
-            await loadLegacyManiaPanel();
             
             showToast('Card regenerated successfully!', 'success');
         } else {

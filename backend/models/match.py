@@ -88,7 +88,10 @@ class MatchDraft:
     special_match_type: Optional[str] = None  # 'steel_cage', 'ladder_match', etc.
     
     # FIX: Add booked_winner field
-    booked_winner: Optional[str] = None  # 'side_a', 'side_b', or None for random
+    booked_winner: Optional[str] = None  # wrestler id or None for random
+    booked_runner_up: Optional[str] = None
+    booked_iron_man: Optional[str] = None
+    booked_most_eliminations: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -106,7 +109,10 @@ class MatchDraft:
             'stipulation': self.stipulation,
             'referee_id': self.referee_id,
             'special_match_type': self.special_match_type,
-            'booked_winner': self.booked_winner  # ADD THIS
+            'booked_winner': self.booked_winner,
+            'booked_runner_up': self.booked_runner_up,
+            'booked_iron_man': self.booked_iron_man,
+            'booked_most_eliminations': self.booked_most_eliminations
         }
     
     @staticmethod
@@ -126,7 +132,10 @@ class MatchDraft:
             stipulation=data.get('stipulation'),
             referee_id=data.get('referee_id'),
             special_match_type=data.get('special_match_type'),
-            booked_winner=data.get('booked_winner')  # ADD THIS
+            booked_winner=data.get('booked_winner'),
+            booked_runner_up=data.get('booked_runner_up'),
+            booked_iron_man=data.get('booked_iron_man'),
+            booked_most_eliminations=data.get('booked_most_eliminations')
         )
 
 

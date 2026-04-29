@@ -28,7 +28,9 @@ class BattleRoyalSimulator:
         match_type: str = 'battle_royal',
         universe_state=None,
         booked_winner: Optional[Wrestler] = None,
-        booked_runner_up: Optional[Wrestler] = None
+        booked_runner_up: Optional[Wrestler] = None,
+        booked_iron_man: Optional[Wrestler] = None,
+        booked_most_eliminations: Optional[Wrestler] = None
     ) -> Dict[str, Any]:
         """
         Main entry point for battle royal simulation.
@@ -45,11 +47,11 @@ class BattleRoyalSimulator:
         """
         
         if match_type == 'rumble':
-            return self._simulate_royal_rumble(participants, universe_state, booked_winner, booked_runner_up)
+            return self._simulate_royal_rumble(participants, universe_state, booked_winner, booked_runner_up, booked_iron_man, booked_most_eliminations)
         elif match_type == 'casino_battle_royal':
-            return self._simulate_casino_battle_royal(participants, universe_state, booked_winner, booked_runner_up)
+            return self._simulate_casino_battle_royal(participants, universe_state, booked_winner, booked_runner_up, booked_iron_man, booked_most_eliminations)
         else:
-            return self._simulate_standard_battle_royal(participants, universe_state, booked_winner, booked_runner_up)
+            return self._simulate_standard_battle_royal(participants, universe_state, booked_winner, booked_runner_up, booked_iron_man, booked_most_eliminations)
     
     def _validate_booked_participants(
         self,
@@ -134,7 +136,9 @@ class BattleRoyalSimulator:
         participants: List[Wrestler],
         universe_state,
         booked_winner: Optional[Wrestler] = None,
-        booked_runner_up: Optional[Wrestler] = None
+        booked_runner_up: Optional[Wrestler] = None,
+        booked_iron_man: Optional[Wrestler] = None,
+        booked_most_eliminations: Optional[Wrestler] = None
     ) -> Dict[str, Any]:
         """
         Standard battle royal: All start in ring, last one standing wins.
@@ -188,7 +192,9 @@ class BattleRoyalSimulator:
             'elimination_order': elimination_order,
             'highlights': highlights,
             'duration_minutes': duration,
-            'match_type': 'battle_royal'
+            'match_type': 'battle_royal',
+            'booked_iron_man': booked_iron_man,
+            'booked_most_eliminations': booked_most_eliminations
         }
     
     def _simulate_royal_rumble(
@@ -196,7 +202,9 @@ class BattleRoyalSimulator:
         participants: List[Wrestler],
         universe_state,
         booked_winner: Optional[Wrestler] = None,
-        booked_runner_up: Optional[Wrestler] = None
+        booked_runner_up: Optional[Wrestler] = None,
+        booked_iron_man: Optional[Wrestler] = None,
+        booked_most_eliminations: Optional[Wrestler] = None
     ) -> Dict[str, Any]:
         """
         Royal Rumble: Timed entries every 90 seconds, 30 participants.
@@ -267,7 +275,9 @@ class BattleRoyalSimulator:
             'entry_order': entry_order,
             'highlights': highlights,
             'duration_minutes': duration,
-            'match_type': 'rumble'
+            'match_type': 'rumble',
+            'booked_iron_man': booked_iron_man,
+            'booked_most_eliminations': booked_most_eliminations
         }
     
     def _simulate_casino_battle_royal(
@@ -275,7 +285,9 @@ class BattleRoyalSimulator:
         participants: List[Wrestler],
         universe_state,
         booked_winner: Optional[Wrestler] = None,
-        booked_runner_up: Optional[Wrestler] = None
+        booked_runner_up: Optional[Wrestler] = None,
+        booked_iron_man: Optional[Wrestler] = None,
+        booked_most_eliminations: Optional[Wrestler] = None
     ) -> Dict[str, Any]:
         """
         Casino Battle Royal: Card-draw entry system (AEW style).
@@ -349,7 +361,9 @@ class BattleRoyalSimulator:
             'suit_groups': {suit: [w.name for w in wrestlers] for suit, wrestlers in suit_groups.items()},
             'highlights': highlights,
             'duration_minutes': duration,
-            'match_type': 'casino_battle_royal'
+            'match_type': 'casino_battle_royal',
+            'booked_iron_man': booked_iron_man,
+            'booked_most_eliminations': booked_most_eliminations
         }
     
     def _calculate_survival_score(self, wrestler: Wrestler) -> float:

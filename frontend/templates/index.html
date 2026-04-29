@@ -1145,8 +1145,11 @@ function executeScripts(container) {
             Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
             const scriptContent = oldScript.textContent;
             if (!scriptContent.trim()) return;
-            const isWrapped = scriptContent.trim().startsWith('(function()') ||
-                              scriptContent.trim().startsWith('!function()');
+            const trimmedScript = scriptContent.trim();
+            const isWrapped = trimmedScript.startsWith('(function()') ||
+                              trimmedScript.startsWith('!function()') ||
+                              trimmedScript.startsWith('(async function()') ||
+                              trimmedScript.startsWith('!async function()');
             const apiInjection = `
                 var fetchAPI = window.fetchAPI;
                 var getAPI   = window.getAPI;
@@ -1155,16 +1158,16 @@ function executeScripts(container) {
                 var deleteAPI = window.deleteAPI;
             `;
             if (!isWrapped) {
-                newScript.textContent = `(function() { ${apiInjection} try { ${scriptContent} } catch(e) { console.error('Error in view script ${index}:',e); } })();`;
+                newScript.textContent = `(async function() { ${apiInjection} try { ${scriptContent} } catch(e) { console.error('Error in view script ${index}:',e); } })();`;
             } else {
-                const wc = scriptContent.trim();
+                const wc = trimmedScript;
                 let ip = -1;
-                if (wc.startsWith('(function()'))   ip = wc.indexOf('{') + 1;
-                else if (wc.startsWith('!function()')) ip = wc.indexOf('{') + 1;
+                if (wc.startsWith('(function()') || wc.startsWith('(async function()')) ip = wc.indexOf('{') + 1;
+                else if (wc.startsWith('!function()') || wc.startsWith('!async function()')) ip = wc.indexOf('{') + 1;
                 if (ip > 0) {
                     newScript.textContent = wc.slice(0, ip) + '\n' + apiInjection + '\n' + wc.slice(ip);
                 } else {
-                    newScript.textContent = `(function() { ${apiInjection} try { ${scriptContent} } catch(e) { console.error('Error in view script ${index}:',e); } })();`;
+                    newScript.textContent = `(async function() { ${apiInjection} try { ${scriptContent} } catch(e) { console.error('Error in view script ${index}:',e); } })();`;
                 }
             }
             oldScript.parentNode.replaceChild(newScript, oldScript);
