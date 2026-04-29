@@ -1508,7 +1508,7 @@ function renderBattleRoyalSelection(container, matchType) {
             '<input type="number" class="form-control mb-3" id="battleRoyalCount" ' +
             'min="' + minCount + '" max="' + maxCount + '" value="' + minCount + '">' +
             '<label class="form-label fw-bold">Select Participants</label>' +
-            '<select class="form-select" id="battleRoyalParticipants" multiple size="10">';
+            '<select class="form-select" id="battleRoyalParticipants" multiple size="10" onchange="updateWinnerDropdown()">';
     
     availableWrestlers.forEach(function(w) {
         html += '<option value="' + w.id + '">' + w.ring_name + ' (' + w.overall_rating + ')</option>';
@@ -1557,14 +1557,34 @@ function renderWrestlerDropdown(id, wrestlers, genderFilter) {
 
 function updateWinnerDropdown() {
     var winnerSelect = document.getElementById('bookedWinnerSelect');
+    if (!winnerSelect) return;
+
+    var runnerUpSelect = document.getElementById('bookedRunnerUpSelect');
+    var ironManSelect = document.getElementById('bookedIronManSelect');
+    var mostElimsSelect = document.getElementById('bookedMostElimsSelect');
+
     winnerSelect.innerHTML = '<option value="">-- Random (Based on ratings) --</option>';
-    
-    // Collect all selected wrestlers
+    if (runnerUpSelect) runnerUpSelect.innerHTML = '<option value="">-- Runner-up / Last Eliminated (Optional) --</option>';
+    if (ironManSelect) ironManSelect.innerHTML = '<option value="">-- Iron Man / Lasts Longest (Optional) --</option>';
+    if (mostElimsSelect) mostElimsSelect.innerHTML = '<option value="">-- Most Eliminations (Optional) --</option>';
+
     var selectedWrestlers = [];
     var selects = document.getElementById('wrestlerSelectionContainer').querySelectorAll('select');
-    
+
     selects.forEach(function(select) {
-        if (select.value && select.id !== 'bookedWinnerSelect') {
+        if (select.id === 'bookedWinnerSelect' || select.id === 'bookedRunnerUpSelect' || select.id === 'bookedIronManSelect' || select.id === 'bookedMostElimsSelect') {
+            return;
+        }
+
+        if (select.multiple) {
+            Array.from(select.selectedOptions || []).forEach(function(opt) {
+                var wrestlerId = opt.value;
+                var wrestler = allWrestlers[wrestlerId];
+                if (wrestler && !selectedWrestlers.find(function(w) { return w.id === wrestlerId; })) {
+                    selectedWrestlers.push(wrestler);
+                }
+            });
+        } else if (select.value) {
             var wrestlerId = select.value;
             var wrestler = allWrestlers[wrestlerId];
             if (wrestler && !selectedWrestlers.find(function(w) { return w.id === wrestlerId; })) {
@@ -1572,14 +1592,22 @@ function updateWinnerDropdown() {
             }
         }
     });
-    
-    // Populate winner dropdown
+
     selectedWrestlers.forEach(function(w) {
         var genderIcon = w.gender === 'male' ? '♂' : '♀';
-        var option = document.createElement('option');
-        option.value = w.id;
-        option.textContent = genderIcon + ' ' + w.ring_name + ' (' + w.overall_rating + ')';
-        winnerSelect.appendChild(option);
+
+        var winnerOption = document.createElement('option');
+        winnerOption.value = w.id;
+        winnerOption.textContent = genderIcon + ' ' + w.ring_name + ' (' + w.overall_rating + ')';
+        winnerSelect.appendChild(winnerOption);
+
+        [runnerUpSelect, ironManSelect, mostElimsSelect].forEach(function(targetSelect) {
+            if (!targetSelect) return;
+            var option = document.createElement('option');
+            option.value = w.id;
+            option.textContent = genderIcon + ' ' + w.ring_name + ' (' + w.overall_rating + ')';
+            targetSelect.appendChild(option);
+        });
     });
 }
 
@@ -2329,6 +2357,16 @@ function editMatch(matchIndex) {
                     }
                 }
             });
+        } else if (match.match_type === 'rumble' || match.match_type === 'battle_royal') {
+            var brSelect = document.getElementById('battleRoyalParticipants');
+            var brCount = document.getElementById('battleRoyalCount');
+            var ids = Array.isArray(match.participants) ? match.participants : [];
+            if (brCount) brCount.value = ids.length || brCount.value;
+            if (brSelect) {
+                Array.from(brSelect.options || []).forEach(function(opt) {
+                    opt.selected = ids.indexOf(opt.value) !== -1;
+                });
+            }
         } else {
             // Singles/multi-person
             (match.participants || []).forEach(function(pid, idx) {
