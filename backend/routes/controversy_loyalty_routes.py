@@ -69,6 +69,8 @@ Endpoints:
 from flask import Blueprint, jsonify, request, current_app
 import traceback
 import random
+import json
+import uuid
 
 from models.controversy_system import (
     ControversyCase, ControversyType,
@@ -119,6 +121,28 @@ def get_database():
 
 def get_universe():
     return current_app.config["UNIVERSE"]
+
+
+def _get_debut_show_options():
+    universe = get_universe()
+    shows = getattr(universe.calendar, "generated_shows", []) or []
+    options = []
+    for show in shows:
+        show_type = getattr(show, "show_type", "")
+        if show_type not in {"weekly_tv", "minor_ppv", "major_ppv"} and not getattr(show, "is_ppv", False):
+            continue
+        options.append({
+            "show_id": show.show_id,
+            "show_name": show.name,
+            "year": show.year,
+            "week": show.week,
+            "show_type": show_type,
+            "is_ppv": bool(show.is_ppv),
+            "brand": show.brand,
+            "label": f"Y{show.year} W{show.week} · {show.name}",
+        })
+    options.sort(key=lambda s: (s["year"], s["week"], s["show_name"]))
+    return options
 
 
 def get_free_agent_pool():
@@ -429,6 +453,15 @@ def api_get_all_secret_signings():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@controversy_bp.route("/api/secret-signings/debut-shows")
+def api_get_secret_signing_debut_shows():
+    """Return database-backed scheduled shows for debut planning."""
+    try:
+        return jsonify({"success": True, "shows": _get_debut_show_options()})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @controversy_bp.route("/api/secret-signings/create", methods=["POST"])
 def api_create_secret_signing():
     """
@@ -453,6 +486,7 @@ def api_create_secret_signing():
         salary          = int(data.get("salary_per_show", 0))
         weeks           = int(data.get("contract_weeks", 52))
         bonus           = int(data.get("signing_bonus", 0))
+        planned_show_id = data.get("planned_show_id", "")
         planned_show    = data.get("planned_show", "")
         planned_week    = int(data.get("planned_week", 1))
         planned_year    = int(data.get("planned_year", 1))
@@ -474,6 +508,16 @@ def api_create_secret_signing():
             universe.balance -= bonus
             get_database().update_game_state(balance=universe.balance)
 
+        show_options = _get_debut_show_options()
+        selected_show = next((s for s in show_options if s["show_id"] == planned_show_id), None)
+        if not selected_show and planned_show:
+            selected_show = next((s for s in show_options if s["show_name"] == planned_show), None)
+        if selected_show:
+            planned_show_id = selected_show["show_id"]
+            planned_show = selected_show["show_name"]
+            planned_week = int(selected_show["week"])
+            planned_year = int(selected_show["year"])
+
         signing = surprise_returns_engine.create_secret_signing(
             fa_id=fa_id, wrestler_name=wrestler_name,
             secret_level=secret_level, salary=salary, weeks=weeks, bonus=bonus,
@@ -481,13 +525,64 @@ def api_create_secret_signing():
             planned_opponent_name=opponent_name,
         )
 
+        booked_match = False
+        auto_book_message = ""
+        if planned_show_id and opponent_name:
+            roster = get_universe().roster.get_all_wrestlers()
+            opponent = next((w for w in roster if w.name == opponent_name), None)
+            if opponent:
+                db = get_database()
+                show_draft = db.get_show_draft(planned_show_id) or {
+                    "show_id": planned_show_id,
+                    "show_name": planned_show or selected_show["show_name"],
+                    "brand": selected_show["brand"] if selected_show else "Cross-Brand",
+                    "show_type": selected_show["show_type"] if selected_show else "weekly_tv",
+                    "is_ppv": bool(selected_show["is_ppv"]) if selected_show else False,
+                    "year": planned_year,
+                    "week": planned_week,
+                    "matches": [],
+                    "segments": [],
+                }
+                show_draft.setdefault("matches", []).append({
+                    "match_id": f"secret_signing_{uuid.uuid4().hex[:10]}",
+                    "side_a": {"wrestler_ids": [fa_id], "wrestler_names": [wrestler_name], "is_tag_team": False},
+                    "side_b": {"wrestler_ids": [opponent.id], "wrestler_names": [opponent.name], "is_tag_team": False},
+                    "match_type": "singles",
+                    "is_title_match": False,
+                    "title_id": None,
+                    "title_name": None,
+                    "card_position": len(show_draft.get("matches", [])),
+                    "booking_bias": "even",
+                    "importance": "normal",
+                    "feud_id": None,
+                    "stipulation": None,
+                    "referee_id": None,
+                    "special_match_type": None,
+                    "booked_winner": None,
+                    "booked_runner_up": None,
+                    "booked_iron_man": None,
+                    "booked_most_eliminations": None,
+                })
+                cursor = db.conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT OR REPLACE INTO show_drafts (show_id, show_data, production_plan, created_at)
+                    VALUES (?, ?, COALESCE((SELECT production_plan FROM show_drafts WHERE show_id=?), NULL), datetime('now'))
+                    """,
+                    (planned_show_id, json.dumps(show_draft), planned_show_id),
+                )
+                db.conn.commit()
+                booked_match = True
+                auto_book_message = f" Match auto-booked vs {opponent.name} on booking page."
+
         return jsonify({
             "success": True,
             "signing": signing.to_dict(),
+            "booked_match": booked_match,
             "message": (
                 f"Secret signing created for {wrestler_name}. "
                 f"Security level: {signing.secret_level.label}. "
-                f"Planned debut: {planned_show} (Week {planned_week})."
+                f"Planned debut: {planned_show} (Week {planned_week}).{auto_book_message}"
             ),
         })
     except Exception as e:
