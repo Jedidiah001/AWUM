@@ -307,36 +307,39 @@ def create_venue_tables(database) -> None:
 def _seed_cities_and_venues(database) -> None:
     cursor = database.conn.cursor()
     row = cursor.execute("SELECT COUNT(*) as c FROM cities").fetchone()
-    if row and int(row["c"]) > 0:
-        return
-
     now = datetime.now().isoformat()
 
-    cursor.executemany(
-        "INSERT OR IGNORE INTO cities (city_id, name, country, continent, is_active, created_at) VALUES (?,?,?,?,1,?)",
-        [(c["id"], c["name"], c["country"], c["continent"], now) for c in _CITY_SEED],
-    )
+    if not (row and int(row["c"]) > 0):
+        cursor.executemany(
+            "INSERT OR IGNORE INTO cities (city_id, name, country, continent, is_active, created_at) VALUES (?,?,?,?,1,?)",
+            [(c["id"], c["name"], c["country"], c["continent"], now) for c in _CITY_SEED],
+        )
 
-    def venues_for_city(city_id: str, city_name: str) -> List[tuple]:
-        # Keep it deterministic and lightweight: 3 venues per city.
-        return [
-            (f"venue_{city_id}_club", city_id, f"{city_name} Club Hall", "club", 2500, 1200, now),
-            (f"venue_{city_id}_arena", city_id, f"{city_name} Arena", "arena", 14000, 6500, now),
-            (f"venue_{city_id}_stadium", city_id, f"{city_name} Stadium", "stadium", 55000, 22000, now),
-        ]
+        def venues_for_city(city_id: str, city_name: str) -> List[tuple]:
+            return [
+                (f"venue_{city_id}_club", city_id, f"{city_name} Club Hall", "club", 50000, 12000, now),
+                (f"venue_{city_id}_arena", city_id, f"{city_name} Arena", "arena", 90000, 22000, now),
+                (f"venue_{city_id}_stadium", city_id, f"{city_name} Stadium", "stadium", 180000, 50000, now),
+            ]
 
-    venues: List[tuple] = []
-    for c in _CITY_SEED:
-        venues.extend(venues_for_city(c["id"], c["name"]))
+        venues: List[tuple] = []
+        for c in _CITY_SEED:
+            venues.extend(venues_for_city(c["id"], c["name"]))
 
-    cursor.executemany(
-        """
-        INSERT OR IGNORE INTO venues
-        (venue_id, city_id, name, venue_tier, capacity, cost, is_active, created_at)
-        VALUES (?,?,?,?,?,?,1,?)
-        """,
-        venues,
-    )
+        cursor.executemany(
+            """
+            INSERT OR IGNORE INTO venues
+            (venue_id, city_id, name, venue_tier, capacity, cost, is_active, created_at)
+            VALUES (?,?,?,?,?,?,1,?)
+            """,
+            venues,
+        )
+
+    # Policy enforcement: city scope and venue capacity bounds
+    cursor.execute("DELETE FROM cities WHERE continent='Africa'")
+    cursor.execute("DELETE FROM cities WHERE continent='Asia' AND country NOT IN ('Saudi Arabia','Qatar')")
+    cursor.execute("DELETE FROM cities WHERE continent NOT IN ('Europe') AND country != 'United States' AND continent != 'Asia'")
+    cursor.execute("UPDATE venues SET capacity = CASE WHEN capacity < 50000 THEN 50000 WHEN capacity > 300000 THEN 300000 ELSE capacity END")
 
 
 def list_cities(
@@ -348,6 +351,8 @@ def list_cities(
 ) -> List[Dict[str, Any]]:
     cursor = database.conn.cursor()
     clauses, params = ["is_active=1"], []
+    # hard region rules
+    clauses.append("((country='United States') OR (continent='Europe') OR (continent='Asia' AND country IN ('Saudi Arabia','Qatar')))")
     if continent:
         clauses.append("continent=?")
         params.append(continent)

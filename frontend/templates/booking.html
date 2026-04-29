@@ -626,7 +626,7 @@
     function normalizeWrestler(wrestler) {
         var attributes = wrestler.attributes || {};
         var stats = wrestler.stats || {};
-        var normalizedGender = (wrestler.gender || '').toLowerCase();
+        var normalizedGender = String(wrestler.gender || '').trim().toLowerCase();
         var normalizedId = wrestler.id || wrestler.wrestler_id || wrestler.wrestlerId || wrestler.worker_id || null;
 
         return Object.assign({}, wrestler, {
@@ -639,7 +639,7 @@
                 : (attributes.overall != null ? attributes.overall : 0),
             current_brand: wrestler.current_brand || wrestler.primary_brand || '',
             primary_brand: wrestler.primary_brand || wrestler.current_brand || '',
-            status: wrestler.status || (wrestler.is_retired ? 'retired' : 'active'),
+            status: String(wrestler.status || (wrestler.is_retired ? 'retired' : 'active')).toLowerCase(),
             popularity: wrestler.popularity != null ? wrestler.popularity : (stats.popularity != null ? stats.popularity : 0),
             momentum: wrestler.momentum != null ? wrestler.momentum : (stats.momentum != null ? stats.momentum : 0),
             morale: wrestler.morale != null ? wrestler.morale : (stats.morale != null ? stats.morale : 0),
@@ -1899,13 +1899,25 @@ function validateSingles() {
 function validateBattleRoyal() {
     var participantSelect = document.getElementById('battleRoyalParticipants');
     if (!participantSelect) return null;
-    
+
+    var matchType = document.getElementById('newMatchType').value;
+    var isRumbleRoyaleShow = currentShowDraft && (currentShowDraft.show_name || '').toLowerCase() === 'rumble royale';
     var selectedOptions = Array.from(participantSelect.selectedOptions);
-    if (selectedOptions.length < 8) {
-        showToast('Battle Royal requires at least 8 participants', 'warning');
+    var requiredCount = (matchType === 'rumble' && isRumbleRoyaleShow) ? 30 : 8;
+
+    if (selectedOptions.length < requiredCount) {
+        var msg = requiredCount === 30
+            ? 'Rumble Royale Royal Rumble requires exactly 30 participants'
+            : 'Battle Royal requires at least 8 participants';
+        showToast(msg, 'warning');
         return null;
     }
-    
+
+    if (requiredCount === 30 && selectedOptions.length !== 30) {
+        showToast('Rumble Royale Royal Rumble requires exactly 30 participants', 'warning');
+        return null;
+    }
+
     return selectedOptions.map(function(opt) { return opt.value; });
 }
 
