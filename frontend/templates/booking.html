@@ -509,8 +509,13 @@
 
             allTitles = {};
 
-            (data.championships || []).forEach(function(t) {
+            var championships = Array.isArray(data)
+                ? data
+                : (Array.isArray(data.championships) ? data.championships : []);
+
+            championships.forEach(function(t) {
                 var normalized = normalizeTitle(t);
+                if (!normalized.id) return;
                 allTitles[normalized.id] = normalized;
             });
             
@@ -682,7 +687,12 @@
     }
 
     function normalizeTitle(title) {
+        var normalizedId = title.id || title.title_id || title.championship_id || null;
+        var normalizedName = title.name || title.title_name || title.championship_name || 'Untitled Championship';
+
         return Object.assign({}, title, {
+            id: normalizedId,
+            name: normalizedName,
             current_brand: title.current_brand || title.assigned_brand || title.brand || '',
             division: inferTitleDivision(title),
             current_champion_id: title.current_champion_id || title.current_holder_id || title.effective_champion_id || null,
@@ -1641,10 +1651,12 @@ function populateTitleDropdown(genderDivision) {
     titles.forEach(function(t) {
         var divisionLabel = t.division === 'male' ? '♂' : (t.division === 'female' ? '♀' : '⚥');
         var option = document.createElement('option');
-        option.value = t.id;
-        option.textContent = divisionLabel + ' ' + t.name;
+        option.value = t.id || '';
+        option.textContent = divisionLabel + ' ' + (t.name || t.title_name || 'Untitled Championship');
         option.dataset.division = t.division;
-        select.appendChild(option);
+        if (option.value) {
+            select.appendChild(option);
+        }
     });
 }
 
