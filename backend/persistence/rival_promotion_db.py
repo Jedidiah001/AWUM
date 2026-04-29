@@ -160,6 +160,32 @@ def create_rival_promotion_tables(database) -> None:
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_bw_rival_bids_war ON bidding_war_rival_bids(bidding_war_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_bw_events_war ON bidding_war_events(bidding_war_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_rival_rel_log_promo ON rival_relationship_log(promotion_id)')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS rival_world_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            promotion_id TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            headline TEXT NOT NULL,
+            details TEXT,
+            impact_score INTEGER NOT NULL DEFAULT 0,
+            year INTEGER NOT NULL,
+            week INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_rival_world_events_timeline ON rival_world_events(year DESC, week DESC)')
+
+    # Backward-compatible column migrations for older saves.
+    for col, ddl in (
+        ("booking_philosophy", "TEXT NOT NULL DEFAULT 'balanced'"),
+        ("management_style", "TEXT NOT NULL DEFAULT 'relationship_builder'"),
+        ("cash_reserves", "INTEGER NOT NULL DEFAULT 0"),
+        ("momentum", "INTEGER NOT NULL DEFAULT 50"),
+    ):
+        try:
+            cursor.execute(f"ALTER TABLE rival_promotions ADD COLUMN {col} {ddl}")
+        except Exception:
+            pass
 
     database.conn.commit()
     print("✅ Rival promotion & bidding war tables created (STEP 126)")
@@ -290,6 +316,52 @@ def update_rival_promotion_field(database, promotion_id: str, field: str, value:
     ''', (value, now, promotion_id))
     
     database.conn.commit()
+
+
+def log_rival_world_event(
+    database,
+    promotion_id: str,
+    event_type: str,
+    headline: str,
+    details: str,
+    impact_score: int,
+    year: int,
+    week: int
+) -> None:
+    """Persist a weekly rival universe event."""
+    cursor = database.conn.cursor()
+    cursor.execute(
+        '''
+        INSERT INTO rival_world_events (
+            promotion_id, event_type, headline, details, impact_score, year, week, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''',
+        (
+            promotion_id,
+            event_type,
+            headline,
+            details,
+            int(impact_score),
+            int(year),
+            int(week),
+            datetime.now().isoformat()
+        )
+    )
+    database.conn.commit()
+
+
+def get_rival_world_events(database, limit: int = 30) -> List[Dict[str, Any]]:
+    """Load latest rival universe events."""
+    cursor = database.conn.cursor()
+    cursor.execute(
+        '''
+        SELECT * FROM rival_world_events
+        ORDER BY year DESC, week DESC, id DESC
+        LIMIT ?
+        ''',
+        (max(1, int(limit)),)
+    )
+    return [dict(r) for r in cursor.fetchall()]
 
 
 # ======================================================================== #

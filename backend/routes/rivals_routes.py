@@ -780,3 +780,65 @@ def api_advance_bidding_round(fa_id):
         current_app.logger.error(f"Error advancing bidding round: {e}")
         current_app.logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
+from persistence.rival_promotion_db import get_rival_world_events
+
+
+@rivals_bp.route('/api/rivals/landscape')
+def api_rivals_landscape():
+    """Persistent competitor landscape with management personalities and strategy."""
+    try:
+        mgr = current_app.config.get('RIVAL_PROMOTION_MANAGER') or current_app.config.get('RIVAL_MANAGER')
+        if not mgr:
+            return jsonify({'success': False, 'error': 'Rival manager unavailable'}), 500
+        rivals = []
+        for promo in mgr.get_all_promotions():
+            rivals.append({
+                'promotion_id': promo.promotion_id,
+                'name': promo.name,
+                'abbreviation': promo.abbreviation,
+                'tier': promo.tier.value if hasattr(promo.tier, 'value') else str(promo.tier),
+                'brand_identity': promo.brand_identity.value if hasattr(promo.brand_identity, 'value') else str(promo.brand_identity),
+                'booking_philosophy': getattr(promo, 'booking_philosophy', 'balanced'),
+                'management_style': getattr(promo, 'management_style', 'relationship_builder'),
+                'budget_per_year': promo.budget_per_year,
+                'remaining_budget': promo.remaining_budget,
+                'cash_reserves': getattr(promo, 'cash_reserves', 0),
+                'momentum': getattr(promo, 'momentum', 50),
+                'roster_size': promo.roster_size,
+                'prestige': promo.prestige,
+                'aggression': promo.aggression,
+            })
+        return jsonify({'success': True, 'rivals': rivals})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@rivals_bp.route('/api/rivals/simulate-week', methods=['POST'])
+def api_rivals_simulate_week():
+    """Simulate one week of rival promotion AI reactions and persist outcomes."""
+    try:
+        ai = current_app.config.get('COMPETING_PROMOTION_AI')
+        if not ai:
+            return jsonify({'success': False, 'error': 'Competing promotion AI unavailable'}), 500
+
+        payload = request.get_json(silent=True) or {}
+        year = int(payload.get('year', 1))
+        week = int(payload.get('week', 1))
+        player_context = payload.get('player_context', {})
+        events = ai.simulate_week(year=year, week=week, player_context=player_context)
+        return jsonify({'success': True, 'year': year, 'week': week, 'events': events})
+    except Exception as e:
+        current_app.logger.error(f"simulate-week failed: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@rivals_bp.route('/api/rivals/world-feed')
+def api_rivals_world_feed():
+    """Get latest persistent rival ecosystem events."""
+    try:
+        db = get_database()
+        limit = int(request.args.get('limit', 30))
+        events = get_rival_world_events(db, limit=limit)
+        return jsonify({'success': True, 'events': events})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
