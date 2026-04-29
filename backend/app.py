@@ -396,10 +396,6 @@ def evolve_view():
 def world_feed_view():
     return render_template('world_feed.html')
 
-@app.route('/history-hub')
-def history_hub_view():
-    return render_template('history_hub.html')
-
 @app.route('/legacy-expansion')
 def legacy_expansion_view():
     """Dashboard for feature sets added in Steps 126-212."""
