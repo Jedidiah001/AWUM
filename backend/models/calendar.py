@@ -21,6 +21,7 @@ class ScheduledShow:
     show_type: str  # 'weekly_tv', 'minor_ppv', 'major_ppv', 'ple'
     is_ppv: bool
     tier: str  # 'weekly', 'minor', 'major'
+    location: str = ''
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -32,7 +33,8 @@ class ScheduledShow:
             'name': self.name,
             'show_type': self.show_type,
             'is_ppv': self.is_ppv,
-            'tier': self.tier
+            'tier': self.tier,
+            'location': self.location
         }
 
 

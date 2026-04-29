@@ -75,6 +75,39 @@ def _sync_house_shows_into_calendar(universe, database):
         # Never break core calendar endpoints due to house show sync issues.
         pass
 
+    try:
+        cursor = database.conn.cursor()
+        exists = cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='custom_ppvs'"
+        ).fetchone()
+        if not exists:
+            return
+        from models.calendar import ScheduledShow
+        rows = cursor.execute(
+            "SELECT * FROM custom_ppvs WHERE status='active' ORDER BY year, week"
+        ).fetchall()
+        by_id = {s.show_id: s for s in universe.calendar.generated_shows}
+        for r in rows:
+            sid = f"custom_ppv_{r['custom_ppv_id']}"
+            if sid in by_id:
+                continue
+            universe.calendar.generated_shows.append(
+                ScheduledShow(
+                    show_id=sid,
+                    year=int(r['year']),
+                    week=int(r['week']),
+                    day_of_week=r['day_of_week'],
+                    brand=r.get('brand', 'Cross-Brand'),
+                    name=r['name'],
+                    show_type='major_ppv' if r['tier'] == 'major' else 'minor_ppv',
+                    is_ppv=True,
+                    tier=r['tier'],
+                    location=r.get('location', ''),
+                )
+            )
+    except Exception:
+        pass
+
 
 # ============================================================================
 # API STATUS

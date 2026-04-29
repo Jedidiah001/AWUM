@@ -133,9 +133,94 @@ def _ensure_tables():
         CREATE INDEX IF NOT EXISTS idx_house_shows_brand ON house_shows(brand, year, week);
         CREATE INDEX IF NOT EXISTS idx_debuts_status     ON production_debuts(status);
         CREATE INDEX IF NOT EXISTS idx_returns_status    ON production_returns(status);
+
+        CREATE TABLE IF NOT EXISTS custom_ppvs (
+            custom_ppv_id    TEXT PRIMARY KEY,
+            name             TEXT NOT NULL,
+            year             INTEGER NOT NULL,
+            week             INTEGER NOT NULL,
+            day_of_week      TEXT NOT NULL DEFAULT 'Sunday',
+            tier             TEXT NOT NULL DEFAULT 'minor',
+            location         TEXT NOT NULL DEFAULT '',
+            brand            TEXT NOT NULL DEFAULT 'Cross-Brand',
+            status           TEXT NOT NULL DEFAULT 'active',
+            created_at       TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS cinematic_matches (
+            cinematic_id      TEXT PRIMARY KEY,
+            show_id           TEXT NOT NULL,
+            year              INTEGER NOT NULL,
+            week              INTEGER NOT NULL,
+            title             TEXT NOT NULL,
+            location          TEXT NOT NULL,
+            script_quality    INTEGER NOT NULL,
+            production_value  INTEGER NOT NULL,
+            acting_quality    INTEGER NOT NULL,
+            originality       INTEGER NOT NULL,
+            overall_rating    REAL NOT NULL,
+            notes             TEXT DEFAULT '',
+            created_at        TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS long_term_story_arcs (
+            arc_id             TEXT PRIMARY KEY,
+            name               TEXT NOT NULL,
+            start_year         INTEGER NOT NULL,
+            start_week         INTEGER NOT NULL,
+            planned_end_year   INTEGER NOT NULL,
+            planned_end_week   INTEGER NOT NULL,
+            current_phase      TEXT NOT NULL DEFAULT 'setup',
+            beats_json         TEXT NOT NULL DEFAULT '[]',
+            status             TEXT NOT NULL DEFAULT 'active',
+            unresolved_penalty INTEGER NOT NULL DEFAULT 0,
+            created_at         TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS twist_swerve_events (
+            swerve_id           TEXT PRIMARY KEY,
+            show_id             TEXT NOT NULL,
+            year                INTEGER NOT NULL,
+            week                INTEGER NOT NULL,
+            title               TEXT NOT NULL,
+            surprise_rating     INTEGER NOT NULL,
+            logic_rating        INTEGER NOT NULL,
+            follow_through      INTEGER NOT NULL,
+            trust_impact        INTEGER NOT NULL,
+            created_at          TEXT NOT NULL
+        );
     """)
     db.conn.commit()
     _tables_ensured = True
+
+
+def _sync_custom_ppvs_into_calendar():
+    """Inject custom PPVs from DB into in-memory calendar for current process."""
+    _ensure_tables()
+    from models.calendar import ScheduledShow
+    rows = _db().conn.execute(
+        "SELECT * FROM custom_ppvs WHERE status='active' ORDER BY year, week"
+    ).fetchall()
+    cal = _universe().calendar
+    by_id = {s.show_id: s for s in cal.generated_shows}
+    for r in rows:
+        row = dict(r)
+        show_id = f"custom_ppv_{row['custom_ppv_id']}"
+        if show_id in by_id:
+            continue
+        cal.generated_shows.append(ScheduledShow(
+            show_id=show_id,
+            year=int(row['year']),
+            week=int(row['week']),
+            day_of_week=row.get('day_of_week', 'Sunday'),
+            brand=row.get('brand', 'Cross-Brand'),
+            name=row['name'],
+            show_type='major_ppv' if row.get('tier') == 'major' else 'minor_ppv',
+            is_ppv=True,
+            tier=row.get('tier', 'minor'),
+            location=row.get('location', ''),
+        ))
+    cal.generated_shows.sort(key=lambda s: (s.year, s.week, {"Monday": 1, "Friday": 2, "Saturday": 3, "Sunday": 4}.get(s.day_of_week, 9)))
 
 
 # ---------------------------------------------------------------------------
@@ -1557,6 +1642,84 @@ def api_booking_summary():
             "upcoming_house_shows": upcoming_hs,
             "booking_notes": notes,
         })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@show_production_bp.route('/api/show-production/custom-ppv/create', methods=['POST'])
+def api_create_custom_ppv():
+    try:
+        _ensure_tables()
+        payload = request.get_json(force=True) or {}
+        required = ['name', 'year', 'week', 'tier', 'location']
+        missing = [k for k in required if not payload.get(k)]
+        if missing:
+            return jsonify({"success": False, "error": f"Missing fields: {', '.join(missing)}"}), 400
+        custom_ppv_id = f"cppv_{uuid.uuid4().hex[:10]}"
+        _db().conn.execute("""
+            INSERT INTO custom_ppvs
+            (custom_ppv_id, name, year, week, day_of_week, tier, location, brand, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)
+        """, (
+            custom_ppv_id, str(payload['name']).strip(), int(payload['year']), int(payload['week']),
+            payload.get('day_of_week', 'Sunday'), payload['tier'], payload['location'],
+            payload.get('brand', 'Cross-Brand'), datetime.utcnow().isoformat()
+        ))
+        _db().conn.commit()
+        _sync_custom_ppvs_into_calendar()
+        return jsonify({"success": True, "custom_ppv_id": custom_ppv_id})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@show_production_bp.route('/api/show-production/advanced/book', methods=['POST'])
+def api_book_advanced_features():
+    """Unified persistence endpoint for cinematic, swerves, arcs, debut secrecy, and main-event grading."""
+    try:
+        _ensure_tables()
+        p = request.get_json(force=True) or {}
+        feature_type = str(p.get('feature_type', '')).strip()
+        year, week = _game_state()
+        cs = _universe().calendar.get_current_show()
+        show_id = p.get('show_id') or (cs.show_id if cs else f"show_y{year}_w{week}")
+        now = datetime.utcnow().isoformat()
+        conn = _db().conn
+
+        if feature_type == 'cinematic_match':
+            vals = [int(p.get(k, 50)) for k in ('script_quality', 'production_value', 'acting_quality', 'originality')]
+            overall = round(sum(vals) / len(vals), 1)
+            cid = f"cine_{uuid.uuid4().hex[:10]}"
+            conn.execute("""INSERT INTO cinematic_matches
+                (cinematic_id, show_id, year, week, title, location, script_quality, production_value, acting_quality, originality, overall_rating, notes, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (cid, show_id, year, week, p.get('title', 'Cinematic Match'), p.get('location', 'Off-site'),
+                 vals[0], vals[1], vals[2], vals[3], overall, p.get('notes', ''), now))
+            conn.commit()
+            return jsonify({"success": True, "feature_id": cid, "overall_rating": overall})
+
+        if feature_type == 'twist_swerve':
+            s, l, f = int(p.get('surprise_rating', 50)), int(p.get('logic_rating', 50)), int(p.get('follow_through', 50))
+            trust_impact = int(((s * 0.35) + (l * 0.40) + (f * 0.25) - 50) / 2)
+            sid = f"swrv_{uuid.uuid4().hex[:10]}"
+            conn.execute("""INSERT INTO twist_swerve_events
+                (swerve_id, show_id, year, week, title, surprise_rating, logic_rating, follow_through, trust_impact, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", (sid, show_id, year, week, p.get('title', 'Storyline Swerve'), s, l, f, trust_impact, now))
+            conn.commit()
+            return jsonify({"success": True, "feature_id": sid, "trust_impact": trust_impact})
+
+        if feature_type == 'long_term_arc':
+            aid = f"arc_{uuid.uuid4().hex[:10]}"
+            conn.execute("""INSERT INTO long_term_story_arcs
+                (arc_id, name, start_year, start_week, planned_end_year, planned_end_week, current_phase, beats_json, status, unresolved_penalty, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', 0, ?)""",
+                (aid, p.get('name', 'Unnamed Arc'), year, week, int(p.get('planned_end_year', year)), int(p.get('planned_end_week', week + 12)),
+                 p.get('current_phase', 'setup'), json.dumps(p.get('beats', [])), now))
+            conn.commit()
+            return jsonify({"success": True, "feature_id": aid})
+
+        return jsonify({"success": False, "error": "Unsupported feature_type"}), 400
     except Exception as e:
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
