@@ -154,12 +154,32 @@ def create_rival_promotion_tables(database) -> None:
         )
     ''')
 
+    # ------------------------------------------------------------------ #
+    # Competitive Landscape Events                                         #
+    # ------------------------------------------------------------------ #
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS rival_competitive_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id TEXT UNIQUE NOT NULL,
+            initiator TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            details TEXT NOT NULL,
+            severity INTEGER NOT NULL DEFAULT 50,
+            year INTEGER NOT NULL DEFAULT 1,
+            week INTEGER NOT NULL DEFAULT 1,
+            metadata TEXT NOT NULL DEFAULT '{}',
+            created_at TEXT NOT NULL
+        )
+    ''')
+
     # Indexes
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_bidding_wars_fa ON bidding_wars(fa_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_bidding_wars_status ON bidding_wars(status)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_bw_rival_bids_war ON bidding_war_rival_bids(bidding_war_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_bw_events_war ON bidding_war_events(bidding_war_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_rival_rel_log_promo ON rival_relationship_log(promotion_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_rival_comp_events_week ON rival_competitive_events(year, week)')
 
     database.conn.commit()
     print("✅ Rival promotion & bidding war tables created (STEP 126)")
@@ -259,6 +279,43 @@ def get_rival_promotion_by_name(database, name: str) -> Optional[Dict[str, Any]]
     d['roster_needs'] = json.loads(d.get('roster_needs') or '[]')
     d['active_pursuits'] = json.loads(d.get('active_pursuits') or '[]')
     return d
+
+
+def log_competitive_event(database, event_id: str, initiator: str, event_type: str, title: str, details: str,
+                          severity: int = 50, year: int = 1, week: int = 1,
+                          metadata: Optional[Dict[str, Any]] = None) -> None:
+    """Persist a competitive landscape event for world-feed tracking."""
+    cursor = database.conn.cursor()
+    cursor.execute('''
+        INSERT OR REPLACE INTO rival_competitive_events (
+            event_id, initiator, event_type, title, details, severity, year, week, metadata, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        event_id, initiator, event_type, title, details, max(0, min(100, int(severity))),
+        year, week, json.dumps(metadata or {}), datetime.now().isoformat()
+    ))
+    database.conn.commit()
+
+
+def get_recent_competitive_events(database, limit: int = 30) -> List[Dict[str, Any]]:
+    """Load recent competitive events, newest first."""
+    cursor = database.conn.cursor()
+    try:
+        cursor.execute('''
+            SELECT * FROM rival_competitive_events
+            ORDER BY year DESC, week DESC, id DESC
+            LIMIT ?
+        ''', (limit,))
+        rows = cursor.fetchall()
+    except Exception:
+        return []
+
+    events = []
+    for row in rows:
+        item = dict(row)
+        item['metadata'] = json.loads(item.get('metadata') or '{}')
+        events.append(item)
+    return events
 
 
 def delete_rival_promotion(database, promotion_id: str) -> None:

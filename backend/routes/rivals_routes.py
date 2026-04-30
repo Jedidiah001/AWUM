@@ -5,6 +5,8 @@ Rival Promotions & Bidding Wars Routes (Steps 126-132)
 from flask import Blueprint, jsonify, request, current_app
 import traceback
 import random
+from economy.rival_promotion_manager import get_rival_promotion_manager
+from persistence.rival_promotion_db import log_competitive_event, get_recent_competitive_events
 
 rivals_bp = Blueprint('rivals', __name__)
 
@@ -156,6 +158,9 @@ def get_rivals_data():
 def api_get_rivals():
     """Get all rival promotions"""
     try:
+        rival_manager = get_rival_promotion_manager()
+        if rival_manager:
+            return jsonify({'success': True, 'rivals': rival_manager.to_dict_list()})
         rivals_data = get_rivals_data()
         return jsonify({
             'success': True,
@@ -174,6 +179,12 @@ def api_get_rivals():
 def api_get_rival(promotion_id):
     """Get a specific rival promotion"""
     try:
+        rival_manager = get_rival_promotion_manager()
+        if rival_manager:
+            promotion = rival_manager.get_promotion_by_id(promotion_id)
+            if not promotion:
+                return jsonify({'success': False, 'error': 'Rival not found'}), 404
+            return jsonify({'success': True, 'rival': promotion.to_dict()})
         rivals_data = get_rivals_data()
         rival = next((r for r in rivals_data['rivals'] if r['promotion_id'] == promotion_id), None)
         
@@ -201,7 +212,8 @@ def api_generate_rival_interest(fa_id):
                 'error': 'Free agent pool not available'
             }), 500
         
-        rivals_data = get_rivals_data()
+        rival_manager = get_rival_promotion_manager()
+        rivals = rival_manager.to_dict_list() if rival_manager else get_rivals_data()['rivals']
         
         # Get the free agent
         fa = free_agent_pool.get_free_agent_by_id(fa_id)
@@ -223,7 +235,7 @@ def api_generate_rival_interest(fa_id):
         
         interested_rivals = []
         
-        for rival in rivals_data['rivals']:
+        for rival in rivals:
             # Calculate interest based on various factors
             base_interest = random.randint(20, 60)
             
@@ -312,6 +324,24 @@ def api_generate_rival_interest(fa_id):
 def api_get_rival_stats():
     """Get bidding war statistics for all rivals"""
     try:
+        rival_manager = get_rival_promotion_manager()
+        if rival_manager:
+            rivals = rival_manager.to_dict_list()
+            stats = [{
+                'promotion_id': rival['promotion_id'],
+                'name': rival['name'],
+                'tier': rival['tier'],
+                'won': rival.get('won_bidding_wars', 0),
+                'lost': rival.get('lost_bidding_wars', 0),
+                'relationship': rival.get('relationship_with_player', 50)
+            } for rival in rivals]
+            return jsonify({
+                'success': True,
+                'stats': stats,
+                'player_wins': 0,
+                'player_losses': 0,
+                'active_wars': 0
+            })
         rivals_data = get_rivals_data()
         
         stats = []
@@ -779,4 +809,63 @@ def api_advance_bidding_round(fa_id):
     except Exception as e:
         current_app.logger.error(f"Error advancing bidding round: {e}")
         current_app.logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@rivals_bp.route('/api/rivals/competitive-event', methods=['POST'])
+def api_record_competitive_event():
+    """Record a player strategic move and trigger rival AI counter-programming."""
+    try:
+        db = get_database()
+        rival_manager = get_rival_promotion_manager()
+        if not db or not rival_manager:
+            return jsonify({'success': False, 'error': 'Rival AI system unavailable'}), 500
+
+        payload = request.get_json() or {}
+        player_move = payload.get('player_move', 'major_announcement')
+        year = int(payload.get('year', 1))
+        week = int(payload.get('week', 1))
+        move_label = payload.get('title', 'Player strategic move')
+
+        reactions = []
+        for promotion in rival_manager.get_all_promotions():
+            # Aggressive promotions counter quickly; relationship-friendly brands emulate selectively.
+            reaction_score = promotion.aggression + random.randint(-20, 15)
+            if player_move in ('surprise_tournament', 'new_tv_deal'):
+                reaction_score += 15
+            if reaction_score < 45:
+                continue
+            event_type = 'counter_programming' if promotion.aggression >= 65 else 'developmental_response'
+            reaction_title = f"{promotion.name} responds to {move_label}"
+            details = (
+                f"{promotion.name} announced a {('counter-programming special' if event_type == 'counter_programming' else 'talent-development showcase')} "
+                f"in response to your {player_move.replace('_', ' ')}."
+            )
+            event_id = f"rival_evt_{promotion.promotion_id}_{year}_{week}_{random.randint(1000,9999)}"
+            log_competitive_event(
+                db, event_id, promotion.promotion_id, event_type, reaction_title, details,
+                severity=min(100, max(35, reaction_score)), year=year, week=week,
+                metadata={'player_move': player_move, 'promotion_name': promotion.name}
+            )
+            reactions.append({'promotion_id': promotion.promotion_id, 'promotion_name': promotion.name, 'event_type': event_type})
+
+        return jsonify({'success': True, 'player_move': player_move, 'reactions_generated': len(reactions), 'reactions': reactions})
+    except Exception as e:
+        current_app.logger.error(f"Error recording competitive event: {e}")
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@rivals_bp.route('/api/rivals/competitive-feed')
+def api_get_competitive_feed():
+    """Get persistent rival competitive landscape feed."""
+    try:
+        db = get_database()
+        if not db:
+            return jsonify({'success': False, 'error': 'Database unavailable'}), 500
+        limit = int(request.args.get('limit', 30))
+        events = get_recent_competitive_events(db, max(1, min(limit, 100)))
+        return jsonify({'success': True, 'events': events})
+    except Exception as e:
+        current_app.logger.error(f"Error loading competitive feed: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
