@@ -410,6 +410,10 @@ def legacy_expansion_view():
     return render_template('legacy_expansion.html')
 
 
+
+@app.route('/booker')
+def booker_view():
+    return render_template('booker.html')
 @app.route('/history-hub')
 def history_hub_view():
     """Historical records and archive dashboard."""
