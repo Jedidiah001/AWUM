@@ -411,6 +411,11 @@ def legacy_expansion_view():
 
 
 
+
+@app.route('/developmental')
+def developmental_view():
+    return render_template('developmental.html')
+
 @app.route('/booker')
 def booker_view():
     return render_template('booker.html')
